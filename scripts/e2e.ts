@@ -364,13 +364,14 @@ if (await exists(asker)) {
 
   // R23: a stake over the colony's limit is refused, and the money comes back.
   const qs = await c.openQuestion({ text: `Limit test ${tag}`, category: "test", resolver: "Public", commitSecs: 8, revealSecs: 20, waitSecs: 2, bounty: 10_000n });
-  const huge = plan(a, 50, 61n);
-  const balanceBefore = await c.creditsOf(a);
+  // `d` already has a strike, so this does not spoil `a` for the birth test below.
+  const huge = plan(d, 50, 61n);
+  const balanceBefore = await c.creditsOf(d);
   await c.commit(qs, huge);
   await c.waitForRevealWindow(qs);
   await c.revealBatch(qs, [huge]);
   await c.sleep(3000);
-  check("R23", "a stake over the limit is refused and refunded", (await c.getQuestion(qs)).reveals === 0 && (await c.creditsOf(a)) === balanceBefore);
+  check("R23", "a stake over the limit is refused and refunded", (await c.getQuestion(qs)).reveals === 0 && (await c.creditsOf(d)) === balanceBefore);
   const end = (await c.getQuestion(qs)).reveal_end_ms - Date.now();
   if (end > 0) await c.sleep(end + 1500);
   await c.clear(qs);
