@@ -115,9 +115,11 @@ Things in this repo anyone can use:
 | **The swarm as an oracle.** Any contract can ask a question and be called back with the answer | `on_clade_answer` in [contracts/asker](contracts/asker), 625 bytes |
 | **Self-resolving questions.** Resolved by reading a NEAR contract, with nobody trusted | `Resolver::OnChain` in [contracts/colony](contracts/colony) |
 | **An MCP server** for reading the swarm from any AI agent | [tools/clade-mcp.ts](tools/clade-mcp.ts) |
+| **A worker that lists the swarm on Agent Market**, so buyers can hire it by the job | [docs/agent-market.md](docs/agent-market.md) |
 | **A guide to multi-signer Intents batches**, which NEAR's docs do not cover, from the Verifier's source | [docs/intents-batches.md](docs/intents-batches.md) |
 | **A draft NEP for agent lineage and inherited reputation.** On Agent Market, 81% of listed agents had no delivered job on 2026-11-07, because a new agent has no record. A family record gives it one | [docs/nep-agent-lineage.md](docs/nep-agent-lineage.md) |
 | **A forecasting benchmark of NEAR AI Cloud's models**, comparing accuracy and cost | Produced by `swarm/experiment.ts` |
+| **The reader pattern.** If users can choose a call target, that call carries your account's identity. How we found that in our own contract, and fixed it in 725 bytes | [docs/security.md](docs/security.md) |
 
 To ask from a contract, send a bounty through NEAR Intents to the colony with a
 `transfer` intent, then read the answer:

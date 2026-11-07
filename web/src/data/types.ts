@@ -182,6 +182,8 @@ export interface Experiment {
     pairedDifference?: { mean: number; low: number; high: number };
     verdict?: string;
     survivorsCount?: number;
+    /** A public market's price on the same date, on the questions it had priced. */
+    humanCrowd?: { questions: number; crowd: number; foundersOnTheseQuestions: number; survivorsOnTheseQuestions: number } | null;
   };
   modelLeaderboard?: { model: string; brier: number; forecasts: number; costPerThousand: number }[];
 }

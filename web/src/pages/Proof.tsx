@@ -296,6 +296,7 @@ function ExperimentView({ e }: { e: Experiment }) {
   ];
   if (exam?.bestFounderInHindsight) rows.push([`Best founder in hindsight, ${exam.bestFounderInHindsight.id}`, n(exam.bestFounderInHindsight.brier)]);
   if (exam?.medianFounder) rows.push([`Median founder, ${exam.medianFounder.id}`, n(exam.medianFounder.brier)]);
+  const crowd = exam?.humanCrowd;
   return (
     <>
       {scripted && <p className="banner inline">This run used scripted forecasts. It tests the machinery, not AI.</p>}
@@ -320,6 +321,11 @@ function ExperimentView({ e }: { e: Experiment }) {
           ))}
         </tbody>
       </table>
+      {crowd && (
+        <p>
+          For scale: on the {crowd.questions} of these questions a public market had priced by the same date, people with real money scored {n(crowd.crowd)}. The survivors scored {n(crowd.survivorsOnTheseQuestions)} on those same questions.
+        </p>
+      )}
       {e.season && (
         <p className="small soft">
           The season ended with {e.season.alive ?? "?"} of {e.season.total ?? "?"} agents alive, after {e.season.births ?? "?"} births and {e.season.deaths ?? "?"} deaths.
@@ -335,6 +341,7 @@ function ExperimentView({ e }: { e: Experiment }) {
                 <th>Model</th>
                 <th className="num">Brier</th>
                 <th className="num">Forecasts</th>
+                <th className="num">Per 1,000</th>
               </tr>
             </thead>
             <tbody>
@@ -343,6 +350,7 @@ function ExperimentView({ e }: { e: Experiment }) {
                   <td className="mono wrap">{row.model}</td>
                   <td className="num mono">{row.brier.toFixed(4)}</td>
                   <td className="num mono">{row.forecasts.toLocaleString()}</td>
+                  <td className="num mono">${row.costPerThousand.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
