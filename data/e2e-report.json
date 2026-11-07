@@ -2,7 +2,7 @@
  "colony": "clade.testnet",
  "verifier": "verifier.tidepool-sandbox.testnet",
  "network": "testnet",
- "at": "2026-11-07T14:46:43.031Z",
+ "at": "2026-11-07T14:57:53.839Z",
  "passed": 51,
  "total": 52,
  "results": [
@@ -10,7 +10,7 @@
    "rule": "R1",
    "claim": "every agent is a real account named under its parent",
    "ok": true,
-   "detail": "ead505.clade.testnet"
+   "detail": "eariky.clade.testnet"
   },
   {
    "rule": "R3",
@@ -22,7 +22,7 @@
    "rule": "R3",
    "claim": "an agent's key cannot call any other contract",
    "ok": true,
-   "detail": "Exceeded 4 providers to execute request"
+   "detail": "Access key receiver clade.testnet does not match transaction receiver verifier.tidepool-sa"
   },
   {
    "rule": "R2",
@@ -123,8 +123,8 @@
   {
    "rule": "R20",
    "claim": "money in equals money out for the question",
-   "ok": false,
-   "detail": "660000 = 260000"
+   "ok": true,
+   "detail": "660000 = 660000"
   },
   {
    "rule": "R17",
@@ -148,7 +148,7 @@
    "rule": "R1",
    "claim": "a child's account exists, named under its parent",
    "ok": true,
-   "detail": "chd505.ebd505.clade.testnet"
+   "detail": "chriky.ebriky.clade.testnet"
   },
   {
    "rule": "R12",
@@ -196,7 +196,7 @@
    "rule": "R13",
    "claim": "a broke agent's account is deleted from the chain",
    "ok": true,
-   "detail": "chd505.ebd505.clade.testnet"
+   "detail": "chriky.ebriky.clade.testnet"
   },
   {
    "rule": "R13",
@@ -226,7 +226,7 @@
    "rule": "R14",
    "claim": "a child keeps running after its parent is deleted",
    "ok": true,
-   "detail": "ord505.eed505.clade.testnet"
+   "detail": "orriky.eeriky.clade.testnet"
   },
   {
    "rule": "R14",
@@ -315,7 +315,7 @@
   {
    "rule": "R12",
    "claim": "two births requested at once cannot both pass the cooldown",
-   "ok": true,
+   "ok": false,
    "detail": "0 born"
   }
  ]

@@ -4,13 +4,14 @@
  *   CLADE_NETWORK=testnet node scripts/e2e.ts
  * Prints PASS or FAIL per rule and writes data/e2e-report.json.
  */
+import "./use-test-colony.ts";
 import { randomBytes } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import { account, exists, loadKey, provider, view } from "../swarm/chain.ts";
 import * as c from "../swarm/colony.ts";
 import { currentSalt, executeIntents, signIntents, transferIntent } from "../swarm/intents.ts";
 
-const { colony, keeper, verifier, token_id: tokenId, treasury } = c.deployment;
+const { colony, keeper, verifier, token_id: tokenId, treasury, asker, token_account: tokenAccount } = c.deployment;
 const results: { rule: string; claim: string; ok: boolean; detail?: string }[] = [];
 const tag = Date.now().toString(36).slice(-4);
 
@@ -220,7 +221,6 @@ await c.resolveSealed(q2, orphanSeal.yes, orphanSeal.salt);
 await c.settle(q2);
 
 // ---------- The swarm as a public oracle ----------
-const asker = `asker.${colony}`;
 if (await exists(asker)) {
   const q3 = await c.openQuestion({ text: `Callback test ${tag}`, category: "test", resolver: "Public", commitSecs: 10, revealSecs: 30, bounty: 20_000n, callback: asker });
   const low = plan(a, 30, 5n);
@@ -246,7 +246,7 @@ if (await exists(asker)) {
   const q4 = await c.openQuestion({
     text: `On-chain test ${tag}: is the token's total supply at least 1,000 units?`,
     category: "test",
-    resolver: { OnChain: { contract: `tusd.${colony}`, method: "ft_total_supply", args: "{}", after_ms, at_least: "1000" } },
+    resolver: { OnChain: { contract: tokenAccount, method: "ft_total_supply", args: "{}", after_ms, at_least: "1000" } },
     commitSecs: 8,
     revealSecs: 25,
     bounty: 20_000n,
@@ -350,24 +350,25 @@ if (await exists(asker)) {
   await askAs(a, { text: "x", category: "c".repeat(5000), source: null, resolver: "Public", commit_secs: 5, reveal_secs: 5, wait_secs: 0, callback: null }, 20_000n);
   check("R16", "an asker cannot fill the colony's storage, and is refunded", (await c.getStats()).questions === statsNow.questions && (await c.creditsOf(a)) === before);
 
-  // Two births requested together must not both pass the check.
-  await c.grant([d], 5_000_000n);
+  // Two births requested together must not both pass the check. `a` has a clean
+  // record and no children, so exactly one of these should succeed.
+  await c.grant([a], 5_000_000n);
   await c.sleep(2500);
   const twinA = `ta${tag}`;
   const twinB = `tb${tag}`;
   const { saveKey, newKey } = await import("../swarm/chain.ts");
-  const keyA = saveKey(`${twinA}.${d}`, newKey());
-  const keyB = saveKey(`${twinB}.${d}`, newKey());
+  const keyA = saveKey(`${twinA}.${a}`, newKey());
+  const keyB = saveKey(`${twinB}.${a}`, newKey());
   const s = await currentSalt(verifier);
   const auth = (label: string, key: string) => ({ intent: "auth_call", contract_id: colony, msg: JSON.stringify({ spawn: { label, public_key: key, genome: genome(label) } }), min_gas: "260000000000000" });
   // Two transactions from two relayers, so both pass the first check while neither
   // has finished. Only the second check, after the balance read, can stop the twin.
   await Promise.all([
-    executeIntents(keeper, verifier, [signIntents(d, verifier, s, [auth(twinA, keyA.public_key)])]).catch(() => null),
-    executeIntents(colony, verifier, [signIntents(d, verifier, s, [auth(twinB, keyB.public_key)])]).catch(() => null),
+    executeIntents(keeper, verifier, [signIntents(a, verifier, s, [auth(twinA, keyA.public_key)])]).catch(() => null),
+    executeIntents(colony, verifier, [signIntents(a, verifier, s, [auth(twinB, keyB.public_key)])]).catch(() => null),
   ]);
   await c.sleep(9000);
-  const born = Number(await exists(`${twinA}.${d}`)) + Number(await exists(`${twinB}.${d}`));
+  const born = Number(await exists(`${twinA}.${a}`)) + Number(await exists(`${twinB}.${a}`));
   check("R12", "two births requested at once cannot both pass the cooldown", born === 1, `${born} born`);
 }
 

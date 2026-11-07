@@ -6,6 +6,7 @@
  *
  *   node scripts/retire-colony.ts
  */
+import "./use-test-colony.ts";
 import { readFileSync, rmSync } from "node:fs";
 import { actions } from "near-api-js";
 import { account, exists, hasKey, inPool, nearBalance, NETWORK, RPC_URL } from "../swarm/chain.ts";

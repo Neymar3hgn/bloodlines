@@ -88,6 +88,17 @@ export interface Question {
   paid: string;
   rewarded: string;
   orders: Order[];
+  /** Each agent's own words, when real models answered. Empty for scripted rounds. */
+  thoughts?: Record<string, Thought>;
+}
+
+export interface Thought {
+  probability: number;
+  reasoning: string | null;
+  model: string | null;
+  /** True when the answer's enclave signature checked out. */
+  signed: boolean;
+  signer: string | null;
 }
 
 export interface Stats {

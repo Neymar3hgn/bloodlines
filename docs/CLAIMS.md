@@ -20,6 +20,10 @@ If a claim is in the README, it is here, with how to check it. "On chain" means
 | Only the parent can create a child | NEAR protocol | [NEAR account spec](https://nomicon.io/DataStructures/Account) |
 | A sealed answer cannot be changed | `resolve_sealed`, R21 | `npm run e2e` |
 | A question can resolve itself | `resolve_onchain`, `on_oracle` | `npm run e2e` |
+| An asker cannot use that read to attack an agent | `contracts/reader`, R21 | `npm run e2e` runs the attack and checks the agent survives |
+| Nothing stays locked if a result never comes | `expire`, R25 | `npm run e2e` |
+| Two births at once cannot both pass | `require_can_spawn` runs after the balance read | `npm run e2e` sends two transactions at once |
+| A replay reproduces a run exactly, with no key | `swarm/experiment.ts --replay` | `npm test` runs the AI path against a local mock, then replays it |
 | A contract can receive the answer | `on_clade_answer`, R22 | `npm run e2e`, `contracts/asker` |
 | The testnet Intents contract has mainnet's code | Same `code_hash`: `BtA1BEFNS619KkvXFsgcpQ21Tb5yMm32aaUkn7xNothk` | `view_account` on `intents.near` and `verifier.tidepool-sandbox.testnet` |
 | The agent contract is 5.5 KB | `contracts/agent` | `npm run build`, then check `res/clade_agent.wasm` |

@@ -165,6 +165,45 @@ function WhoGotWhat({ q, highlight, onHighlight }: { q: Question; highlight: str
   );
 }
 
+/** The reasoning behind the number. Only real model answers have any. */
+function WhatTheyThought({ q, highlight, onHighlight }: { q: Question; highlight: string | null; onHighlight: (a: string | null) => void }) {
+  const beliefs = useMemo(() => new Map(q.orders.map((o) => [o.agent, o.belief])), [q.orders]);
+  const rows = useMemo(
+    () =>
+      Object.entries(q.thoughts ?? {})
+        .filter(([, t]) => t.reasoning)
+        .sort(([a], [b]) => (beliefs.get(b) ?? 0) - (beliefs.get(a) ?? 0)),
+    [q.thoughts, beliefs],
+  );
+  if (rows.length === 0) return null;
+  const signed = rows.filter(([, t]) => t.signed).length;
+  return (
+    <section className="block" aria-labelledby="why-title">
+      <h2 id="why-title">Why they think so</h2>
+      <p className="small soft">
+        Each agent's own reasoning, sealed with its forecast. {signed === rows.length ? "Every answer" : `${signed} of ${rows.length} answers`} here {signed === 1 ? "was" : "were"} signed by the model inside a secure enclave, and the hash of each one is on chain.
+      </p>
+      <ul className="thoughts">
+        {rows.map(([agent, t]) => (
+          <li key={agent} className={highlight === agent ? "is-on" : undefined} onPointerEnter={() => onHighlight(agent)} onPointerLeave={() => onHighlight(null)}>
+            <span className="thought-who">
+              <AgentName id={agent} />
+              <span className="mono">{beliefs.get(agent) ?? Math.round(t.probability * 100)}%</span>
+            </span>
+            <p>{t.reasoning}</p>
+            {t.model && (
+              <span className="thought-model mono">
+                {t.model.split("/").pop()}
+                {t.signed ? ", signed" : ""}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 function MoneyBalance({ q }: { q: Question }) {
   const m = useModel();
   const unit = tokenSymbol(m.snapshot.network);
@@ -228,8 +267,12 @@ function MoneyBalance({ q }: { q: Question }) {
       {q.status === "Settled" && (
         <p className="small soft">
           The treasury took its {exact(cut)} cut of the bounty
-          {left > 0n ? `, plus ${exact(left)} of reward that ${q.yes_won === null || big(q.rewarded) === 0n ? "nobody earned" : "was left by rounding down"}` : ""}. Bills of {exact(ledger.bills)} went
-          straight to the treasury at the reveal, so they sit outside both columns.
+          {q.yes_won === null
+            ? `, and the other ${exact(left)} of the bounty went back to the asker`
+            : left > 0n
+              ? `, plus ${exact(left)} of reward that ${big(q.rewarded) === 0n ? "nobody earned" : "was left by rounding down"}`
+              : ""}
+          . Bills of {exact(ledger.bills)} went straight to the treasury at the reveal, so they sit outside both columns.
         </p>
       )}
     </section>
@@ -290,6 +333,7 @@ export function RoundPage({ id }: { id: number }) {
         )}
       </section>
 
+      <WhatTheyThought q={q} highlight={highlight} onHighlight={setHighlight} />
       <SealSection q={q} />
       {q.orders.length > 0 && <WhoGotWhat q={q} highlight={highlight} onHighlight={setHighlight} />}
       <MoneyBalance q={q} />

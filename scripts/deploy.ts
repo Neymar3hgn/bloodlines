@@ -10,17 +10,23 @@ import { account, exists, hasKey, loadKey, nearBalance, NETWORK, newKey, provide
 const near = (n: number) => BigInt(Math.round(n * 1e6)) * 10n ** 18n;
 const TGAS = 1_000_000_000_000n;
 
-const ROOT = process.env.CLADE_ROOT ?? "clade.testnet";
+/** The account that owns the shared pieces: keeper, agent code, test token, reader. */
+const HOME = process.env.CLADE_HOME ?? "clade.testnet";
+/** The colony contract's own account. It can be `HOME`, or a sub-account for a new season. */
+const ROOT = process.env.CLADE_ROOT ?? HOME;
+const OUT = process.env.CLADE_DEPLOYMENT ?? `data/deployment.${NETWORK}.json`;
 const VERIFIER = process.env.CLADE_VERIFIER ?? "verifier.tidepool-sandbox.testnet";
-const tokenAccount = `tusd.${ROOT}`;
+const tokenAccount = `tusd.${HOME}`;
 const TOKEN_ID = process.env.CLADE_TOKEN ?? `nep141:${tokenAccount}`;
-const KEEPER = `keeper.${ROOT}`;
-const CODE = `code.${ROOT}`;
+const KEEPER = `keeper.${HOME}`;
+const CODE = `code.${HOME}`;
+const READER = `reader.${HOME}`;
+const ASKER = `asker.${HOME}`;
 const TREASURY = `treasury.${ROOT}`;
-const READER = `reader.${ROOT}`;
 const fresh = process.argv.includes("--fresh");
+const seedNear = Number(process.env.CLADE_SEED_NEAR ?? 4.6);
 
-const root = account(ROOT);
+const home = account(HOME);
 
 async function subAccount(id: string, fund: number) {
   if (await exists(id)) {
@@ -29,7 +35,7 @@ async function subAccount(id: string, fund: number) {
   }
   const kp = hasKey(id) ? null : newKey();
   if (kp) saveKey(id, kp);
-  await root.signAndSendTransaction({
+  await home.signAndSendTransaction({
     receiverId: id,
     actions: [actions.createAccount(), actions.transfer(near(fund)), actions.addFullAccessKey(PublicKey.fromString(loadKey(id).public_key))],
     waitUntil: "EXECUTED_OPTIMISTIC",
@@ -44,9 +50,10 @@ async function codeHash(id: string): Promise<string> {
 
 const isDeployed = async (id: string) => !/^1{32}$/.test(await codeHash(id));
 
-console.log(`Deploying on ${NETWORK}. ${ROOT} holds ${(await nearBalance(ROOT)).toFixed(3)} NEAR`);
+console.log(`Deploying ${ROOT} on ${NETWORK}. ${HOME} holds ${(await nearBalance(HOME)).toFixed(3)} NEAR`);
 
 console.log("1. Accounts");
+if (ROOT !== HOME) await subAccount(ROOT, seedNear);
 await subAccount(KEEPER, 0.4);
 await subAccount(CODE, 0.62);
 await subAccount(READER, 0.03);
@@ -140,9 +147,9 @@ if (!(await isDeployed(ROOT)) || fresh) {
     max_open: 8,
     treasury_bps: 500,
     min_bounty: "10000",
-    agent_near: near(0.04).toString(),
+    agent_near: near(0.03).toString(),
   };
-  await root.signAndSendTransaction({
+  await account(ROOT).signAndSendTransaction({
     receiverId: ROOT,
     actions: [actions.deployContract(readFileSync("res/clade_colony.wasm")), actions.functionCall("new", { config }, 30n * TGAS, 0n)],
     waitUntil: "EXECUTED_OPTIMISTIC",
@@ -151,14 +158,13 @@ if (!(await isDeployed(ROOT)) || fresh) {
 } else console.log("  already deployed");
 
 console.log("7. Example contract that receives the swarm's answer");
-const asker = `asker.${ROOT}`;
-await subAccount(asker, 0.08);
-if (!(await isDeployed(asker))) {
-  await account(asker).signAndSendTransaction({ receiverId: asker, actions: [actions.deployContract(readFileSync("res/clade_asker.wasm"))], waitUntil: "EXECUTED_OPTIMISTIC" } as never);
+await subAccount(ASKER, 0.08);
+if (!(await isDeployed(ASKER))) {
+  await account(ASKER).signAndSendTransaction({ receiverId: ASKER, actions: [actions.deployContract(readFileSync("res/clade_asker.wasm"))], waitUntil: "EXECUTED_OPTIMISTIC" } as never);
   console.log("  deployed");
 }
 
-const deployment = { network: NETWORK, colony: ROOT, keeper: KEEPER, verifier: VERIFIER, token_id: TOKEN_ID, treasury: TREASURY, agent_code: CODE };
-writeFileSync(`data/deployment.${NETWORK}.json`, JSON.stringify(deployment, null, 2) + "\n");
+const deployment = { network: NETWORK, colony: ROOT, keeper: KEEPER, verifier: VERIFIER, token_id: TOKEN_ID, treasury: TREASURY, agent_code: CODE, token_account: tokenAccount, reader: READER, asker: ASKER };
+writeFileSync(OUT, JSON.stringify(deployment, null, 2) + "\n");
 console.log("Stats:", await view(ROOT, "get_stats"));
 console.log(`${ROOT} holds ${(await nearBalance(ROOT)).toFixed(3)} NEAR`);

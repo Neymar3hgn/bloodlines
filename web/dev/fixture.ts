@@ -215,6 +215,18 @@ function runColony() {
       paid: paid.toString(),
       rewarded: rewarded.toString(),
       orders: seen,
+    thoughts: Object.fromEntries(
+      seen.slice(0, 7).map((o, k) => [
+        o.agent,
+        {
+          probability: o.belief / 100,
+          reasoning: "Fixture text standing in for a model's reasoning. Two short sentences go here, so the layout can be checked.",
+          model: k % 2 ? "Qwen/Qwen3.8-27B" : "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+          signed: k % 3 !== 0,
+          signer: null,
+        },
+      ]),
+    ),
     });
 
     // R13: the broke die, and the nearest living ancestor inherits.

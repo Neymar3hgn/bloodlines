@@ -146,7 +146,9 @@ export function ledgerOf(q: Question): Ledger | null {
     };
   }
   if (q.status !== "Settled") return null;
-  const treasury = big(q.bounty) - big(q.rewarded);
+  // A voided question has no winners, so its pool goes back to the asker (R25).
+  const voided = q.yes_won === null;
+  const treasury = voided ? big(q.bounty) - big(q.pool) : big(q.bounty) - big(q.rewarded);
   const moneyIn = [
     { label: "Stakes locked", units: big(q.locked) },
     { label: "Bounty", units: big(q.bounty) },
@@ -154,7 +156,7 @@ export function ledgerOf(q: Question): Ledger | null {
   const moneyOut = [
     { label: "Refunded at clearing", units: big(q.refunded) },
     { label: q.yes_won === null ? "Costs paid back" : "Paid to right shares", units: big(q.paid) },
-    { label: "Rewards for beating the swarm", units: big(q.rewarded) },
+    voided ? { label: "Bounty back to the asker", units: big(q.pool) } : { label: "Rewards for beating the swarm", units: big(q.rewarded) },
     { label: "Treasury", units: treasury },
   ];
   return {

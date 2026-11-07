@@ -20,6 +20,7 @@ names are the family tree**, and only NEAR's account model makes that possible.
 | Colony contract | [`clade.testnet`](https://testnet.nearblocks.io/address/clade.testnet) |
 | Every claim and its proof | [docs/CLAIMS.md](docs/CLAIMS.md) |
 | Architecture and a round, step by step | [docs/architecture.md](docs/architecture.md) |
+| Security review, including a serious bug we found and fixed | [docs/security.md](docs/security.md) |
 
 ## Try it
 
@@ -148,6 +149,7 @@ npm run snapshot
 - Questions used for replay come from public sources, read-only. Model training
   cut-offs are not fully known, so some answers could leak into older questions.
 - Stablecoin payments from any chain are designed, not yet built.
+- See [docs/security.md](docs/security.md) for everything found, fixed and still open.
 
 ## Libraries and AI
 

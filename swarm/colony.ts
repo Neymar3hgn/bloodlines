@@ -13,9 +13,13 @@ export interface Deployment {
   token_id: string;
   treasury: string;
   agent_code: string;
+  token_account: string;
+  reader: string;
+  asker: string;
 }
 
-export const deployment: Deployment = JSON.parse(readFileSync(`data/deployment.${NETWORK}.json`, "utf8"));
+/** The public colony by default. `npm run e2e` points this at a separate test colony. */
+export const deployment: Deployment = JSON.parse(readFileSync(process.env.CLADE_DEPLOYMENT ?? `data/deployment.${NETWORK}.json`, "utf8"));
 const { colony, keeper, verifier, token_id: tokenId } = deployment;
 
 const TGAS = 1_000_000_000_000n;
