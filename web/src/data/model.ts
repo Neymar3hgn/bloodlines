@@ -154,6 +154,13 @@ export function stageLine(q: Question, now: number): string {
   }
 }
 
+/** Who answered a round, from what was saved with it. Null for a round too new to be in a snapshot. */
+export function answeredBy(q: Question): "real models" | "scripted agents" | null {
+  const rows = Object.values(q.thoughts ?? {});
+  if (rows.length === 0) return null;
+  return rows.some((t) => t.reasoning) ? "real models" : "scripted agents";
+}
+
 export const net = (o: Order) => big(o.payout) + big(o.reward) - big(o.cost) - big(o.bill);
 
 export interface Ledger {

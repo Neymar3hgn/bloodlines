@@ -4,7 +4,7 @@
  * bytes it sent and received so those hashes can be checked by anyone.
  */
 import { createHash, randomBytes } from "node:crypto";
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { secp256k1 } from "@noble/curves/secp256k1.js";
 import { keccak_256 } from "@noble/hashes/sha3.js";
 import type { Genome } from "./genome.ts";
@@ -14,12 +14,26 @@ const KEY = process.env.NEARAI_API_KEY ?? "";
 const CACHE = "data/llm";
 /** Forecasts are short, but thinking models spend tokens before they answer. */
 const MAX_TOKENS = 1200;
+/**
+ * What real calls have cost, across every run. The credit is limited,
+ * so this is a hard limit, and raising it is a decision, not a fix. A mock has no ledger.
+ */
+const LEDGER = process.env.CLADE_SPEND_FILE ?? (BASE.includes("cloud-api.near.ai") ? "data/llm-spend.json" : null);
+const LIMIT_USD = Number(process.env.CLADE_SPEND_LIMIT ?? 0.5);
 
-/** A bad key or empty balance. Every later call would fail too, so a run must stop, not skip. */
+/** A bad key, an empty balance or the spending limit. Every later call would fail too, so a run must stop, not skip. */
 export class AccountProblem extends Error {
   constructor(status: number) {
-    super(status === 402 ? "NEAR AI credit has run out" : "the NEAR AI key was refused");
+    super(status === 0 ? `the spending limit of $${LIMIT_USD} was reached` : status === 402 ? "NEAR AI credit has run out" : "the NEAR AI key was refused");
   }
+}
+
+export const spentSoFar = (): { usd: number; calls: number } => (LEDGER && existsSync(LEDGER) ? JSON.parse(readFileSync(LEDGER, "utf8")) : { usd: 0, calls: 0 });
+
+function recordSpend(micros: number) {
+  if (!LEDGER) return;
+  const { usd, calls } = spentSoFar();
+  writeFileSync(LEDGER, JSON.stringify({ usd: usd + micros / 1e6, calls: calls + 1 }));
 }
 
 export interface Tee {
@@ -195,6 +209,7 @@ function requestBody(model: string, system: string, user: string, temperature: n
 
 export async function complete(model: string, system: string, user: string, temperature: number, maxTokens = MAX_TOKENS): Promise<Reply> {
   if (!KEY) throw new Error("NEARAI_API_KEY is not set");
+  if (spentSoFar().usd >= LIMIT_USD) throw new AccountProblem(0);
   const price = (await modelPrices()).get(model);
   if (price?.verifiable) await attestation(model);
   // Build the body once. The signature covers these exact bytes.
@@ -218,6 +233,7 @@ export async function complete(model: string, system: string, user: string, temp
       const tokensIn = usage.prompt_tokens ?? 0;
       const tokensOut = usage.completion_tokens ?? 0;
       const cost = price ? (tokensIn * price.input + tokensOut * price.output) * 1e6 : 0;
+      recordSpend(cost);
       const tee = price?.verifiable ? await signatureFor(parsed.id, model, sha256(body), sha256(raw)) : null;
       const message = parsed.choices?.[0]?.message ?? {};
       // Some thinking models put the answer in a reasoning field when they run out of room.

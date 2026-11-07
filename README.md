@@ -45,7 +45,7 @@ npm ci
 
 | Do | You should see |
 |---|---|
-| `npm test` | `pass 75`, including 20,000 random order books that all balance exactly, and the whole AI path against a local mock |
+| `npm test` | `pass 76`, including 20,000 random order books that all balance exactly, and the whole AI path against a local mock |
 | `npm run sim` | A scripted colony with no AI calls, in seconds. Survivors beat founders on an exam, and lying loses money. Add `-- --seeds 8` for the published numbers |
 | `npm run verify` | The whole colony rebuilt from public chain data: `10 of 10 checks pass` |
 | `cd contracts && cargo test -p clade-core` | `9 passed`, including 2,000 vectors shared with the TypeScript engine (needs Rust 1.95) |

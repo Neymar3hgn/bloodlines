@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { BeliefAxis } from "../components/BeliefAxis";
 import { Account, AgentName, Empty, NotFound } from "../components/bits";
 import { big, clock, column, date, exact, money, plural, signed, six, span, tokenSymbol } from "../data/format";
-import { ledgerOf, net, roundState, SIDE_NAME, stageLine, type RoundState } from "../data/model";
+import { answeredBy, ledgerOf, net, roundState, SIDE_NAME, stageLine, type RoundState } from "../data/model";
 import type { Order, Question } from "../data/types";
 import { useModel, useNow, useTitle } from "../hooks";
 import { roundHref } from "../router";
@@ -364,6 +364,7 @@ export function RoundPage({ id }: { id: number }) {
       <section className="page-head round-head">
         <p className="eyebrow">
           Round {q.id}, {q.category === "test" ? "contract test" : q.category}
+          {answeredBy(q) ? `, ${answeredBy(q)}` : ""}
         </p>
         <h1>{q.text}</h1>
         <p className="answer">

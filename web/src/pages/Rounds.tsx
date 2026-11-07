@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Empty } from "../components/bits";
 import { MiniAxis } from "../components/charts";
 import { plural, stamp } from "../data/format";
-import { roundState } from "../data/model";
+import { answeredBy, roundState } from "../data/model";
 import type { Question } from "../data/types";
 import { useModel, useNow, useTitle } from "../hooks";
 import { roundHref } from "../router";
@@ -65,6 +65,7 @@ export function RoundsPage() {
                   <span className="r-text">{q.text}</span>
                   <span className="r-meta">
                     {q.category === "test" ? "contract test" : q.category}, {plural(q.reveals, "agent")}
+                    {answeredBy(q) === "real models" ? ", real models" : ""}
                     {q.research?.status === "Bought" ? `, ${q.research.buyers.length} shared a briefing` : ""}, {stamp(q.opened_ms)}
                   </span>
                   <span className="r-axis">

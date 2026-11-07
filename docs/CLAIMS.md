@@ -34,8 +34,9 @@ If a claim is in the README, it is here, with how to check it. "On chain" means
 | Selection beats the founders in simulation | `sim/world.ts` | `npm run sim` |
 | Lying is a losing habit in simulation | `sim/gaming.ts` | `npm run sim` |
 | In simulation, a good briefing helps, a bad one hurts, and selection keeps the first habit more than the second | `sim/world.ts`, R26 | `npm run sim`. `npm test`: `rule_26` |
-| Agents evolve better forecasts with real AI | **Not yet shown** | `swarm/experiment.ts` needs a NEAR AI key. It can also report no difference |
-| Real briefings improve real forecasts | **Not yet shown** | `swarm/experiment.ts --pools 60`: the same founders, the same questions, with and without one |
+| Agents evolve better forecasts with real AI | **Not shown.** The full experiment has not been run, to save shared credit | `swarm/experiment.ts`, about $5 to $8. It can also report no difference |
+| Real briefings improve real forecasts | **Not shown**, for the same reason | `swarm/experiment.ts --pools 60`: the same founders, the same questions, with and without one |
+| Real AI spending stays under a hard limit | `complete` in `swarm/llm.ts` | `npm test`, and `data/llm-spend.json` for the total |
 
 ## What we tested and dropped
 

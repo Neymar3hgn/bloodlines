@@ -233,8 +233,9 @@ export interface Snapshot {
   e2e: E2e | null;
   sim: Sim | null;
   experiment: Experiment | null;
-  /** "ai" hides the scripted banner. Missing counts as scripted. */
+  /** "ai" hides the scripted banner, and "mixed" says how many rounds were real. Missing counts as scripted. */
   mode?: string;
+  real_rounds?: number;
   /** Set only by the dev fixture, so a fixture can never pass as chain data. */
   fixture?: boolean;
 }

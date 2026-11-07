@@ -30,12 +30,18 @@ rmSync(workDir, { recursive: true, force: true });
 mkdirSync(workDir, { recursive: true });
 
 const realRounds = snapshot.questions.filter((q) => q.status === "Settled" && q.yes_won !== null && q.category !== "test");
-const round = [...realRounds].sort((a, b) => b.reveals - a.reveals || b.id - a.id)[0];
+// A round real models answered, if there is one, because that is the one worth showing.
+const answeredByModels = (q) => Object.values(q.thoughts ?? {}).some((t) => t.reasoning);
+const round = [...realRounds].sort((a, b) => answeredByModels(b) - answeredByModels(a) || b.reveals - a.reveals || b.id - a.id)[0];
 const pooled = [...realRounds].reverse().find((q) => q.research?.status === "Bought" && q.research.buyers.length >= 4);
 const dead = snapshot.agents.find((a) => a.status === "Dead");
 const child = [...snapshot.agents].filter((a) => a.generation > 0).sort((a, b) => b.generation - a.generation)[0];
-const scripted = snapshot.mode !== "ai";
-const usesAi = scripted ? "Scripted agents, testing the contracts." : "Real models, on NEAR AI Cloud.";
+const scripted = snapshot.mode === "scripted";
+const usesAi = scripted
+  ? "Scripted agents, testing the contracts."
+  : snapshot.mode === "mixed"
+    ? `${snapshot.real_rounds} rounds on real models, the rest scripted to test the contracts.`
+    : "Real models, on NEAR AI Cloud.";
 const verdict = snapshot.experiment?.mode === "ai" ? snapshot.experiment.exam?.verdict : null;
 
 const browser = await chromium.launch();

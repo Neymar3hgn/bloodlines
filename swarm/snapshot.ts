@@ -67,10 +67,13 @@ const credits = await inPool(agents, 3, ([id, a]) => (a.status === "Dead" ? Prom
 const reputations = await inPool(agents, 3, ([id]) => c.getReputation(id));
 const orders = await inPool(questions, 3, (q) => (q.reveals > 0 ? c.getOrders(q.id) : Promise.resolve([])));
 
-const anyAi = Object.values(notes).some((rows) => Object.values(rows).some((n) => n.reasoning));
+// Rounds with reasoning were answered by real models. The site says which, round by round.
+const answered = questions.filter((q) => q.reveals > 0);
+const realRounds = answered.filter((q) => Object.values(notes[q.id] ?? {}).some((n) => n.reasoning)).length;
 const snapshot = {
   generated: new Date().toISOString(),
-  mode: anyAi ? "ai" : "scripted",
+  mode: realRounds === 0 ? "scripted" : realRounds === answered.length ? "ai" : "mixed",
+  real_rounds: realRounds,
   network,
   colony,
   keeper,

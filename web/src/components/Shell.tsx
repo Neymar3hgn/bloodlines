@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Account } from "./bits";
-import { age, stamp } from "../data/format";
+import { age, plural, stamp } from "../data/format";
 import { useLiveStats, useModel, useNow } from "../hooks";
 import type { Route } from "../router";
 
@@ -41,6 +41,9 @@ function ModeBanner() {
     return <p className="banner is-warn">Fixture data from web/dev. This never ships. Nothing here happened on chain.</p>;
   }
   if (m.snapshot.mode === "ai") return null;
+  if (m.snapshot.mode === "mixed") {
+    return <p className="banner">{plural(m.snapshot.real_rounds ?? 0, "round")} used real models. The rest used scripted agents, to test the contracts. Each round says which.</p>;
+  }
   return <p className="banner">These rounds used scripted agents, not AI. It is a test of the contracts.</p>;
 }
 
