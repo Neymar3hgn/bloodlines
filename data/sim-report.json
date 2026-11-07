@@ -1,0 +1,446 @@
+{
+ "seeds": 8,
+ "colony": {
+  "buckets": [
+   {
+    "from": 0,
+    "brier": 0.179578,
+    "avgBrier": 0.18140711258366912,
+    "truthError": 0.01050931748262101,
+    "alive": 28,
+    "meanNoise": 1.2190378900214898,
+    "meanHerd": 0.4680998686916646,
+    "meanConfidence": 1.2401235100909296,
+    "wealth": 27.379397,
+    "maxGen": 1,
+    "births": 3,
+    "deaths": 0
+   },
+   {
+    "from": 100,
+    "brier": 0.13148900000000002,
+    "avgBrier": 0.14577297913026688,
+    "truthError": 0.007826882509641288,
+    "alive": 32,
+    "meanNoise": 1.231902282387934,
+    "meanHerd": 0.3538310630768784,
+    "meanConfidence": 1.3969192505888068,
+    "wealth": 28.926017,
+    "maxGen": 2,
+    "births": 5,
+    "deaths": 1
+   },
+   {
+    "from": 200,
+    "brier": 0.15377900000000003,
+    "avgBrier": 0.16669498467080324,
+    "truthError": 0.013133343802623931,
+    "alive": 30,
+    "meanNoise": 1.1997932328788874,
+    "meanHerd": 0.31167762460503506,
+    "meanConfidence": 1.4514612711221127,
+    "wealth": 29.66771,
+    "maxGen": 2,
+    "births": 2,
+    "deaths": 4
+   },
+   {
+    "from": 300,
+    "brier": 0.210345,
+    "avgBrier": 0.20733991472316782,
+    "truthError": 0.008732383545329481,
+    "alive": 36,
+    "meanNoise": 1.2346983636179223,
+    "meanHerd": 0.27367544990527093,
+    "meanConfidence": 1.3681645048344186,
+    "wealth": 30.277986,
+    "maxGen": 2,
+    "births": 8,
+    "deaths": 2
+   },
+   {
+    "from": 400,
+    "brier": 0.21812700000000007,
+    "avgBrier": 0.20726132314115858,
+    "truthError": 0.006323060723729841,
+    "alive": 38,
+    "meanNoise": 1.2862961511038093,
+    "meanHerd": 0.2351512280758809,
+    "meanConfidence": 1.3050209692703798,
+    "wealth": 30.533008,
+    "maxGen": 3,
+    "births": 4,
+    "deaths": 2
+   },
+   {
+    "from": 500,
+    "brier": 0.16635099999999997,
+    "avgBrier": 0.17203518592601244,
+    "truthError": 0.008552755878719669,
+    "alive": 37,
+    "meanNoise": 1.2726807836367453,
+    "meanHerd": 0.22888934280578288,
+    "meanConfidence": 1.3536418983533678,
+    "wealth": 30.417179,
+    "maxGen": 3,
+    "births": 3,
+    "deaths": 4
+   },
+   {
+    "from": 600,
+    "brier": 0.20871099999999998,
+    "avgBrier": 0.2097980099374901,
+    "truthError": 0.005095913875642114,
+    "alive": 42,
+    "meanNoise": 1.4806165880751159,
+    "meanHerd": 0.224752088818092,
+    "meanConfidence": 1.1803807098724095,
+    "wealth": 30.678858,
+    "maxGen": 5,
+    "births": 7,
+    "deaths": 2
+   },
+   {
+    "from": 700,
+    "brier": 0.19833,
+    "avgBrier": 0.18976167853205855,
+    "truthError": 0.006021141413244779,
+    "alive": 42,
+    "meanNoise": 1.4378261704143789,
+    "meanHerd": 0.2275101818926266,
+    "meanConfidence": 1.1535398865546271,
+    "wealth": 30.575954,
+    "maxGen": 5,
+    "births": 4,
+    "deaths": 4
+   },
+   {
+    "from": 800,
+    "brier": 0.22204500000000002,
+    "avgBrier": 0.2070331207864631,
+    "truthError": 0.006405831341510028,
+    "alive": 42,
+    "meanNoise": 1.3883690787296155,
+    "meanHerd": 0.23018613035032237,
+    "meanConfidence": 1.1239874572579829,
+    "wealth": 30.413812,
+    "maxGen": 5,
+    "births": 4,
+    "deaths": 4
+   },
+   {
+    "from": 900,
+    "brier": 0.2269240000000001,
+    "avgBrier": 0.21917183118768677,
+    "truthError": 0.008575765996078415,
+    "alive": 43,
+    "meanNoise": 1.3819055379578093,
+    "meanHerd": 0.23078213995919739,
+    "meanConfidence": 1.100636145142033,
+    "wealth": 30.196366,
+    "maxGen": 6,
+    "births": 6,
+    "deaths": 5
+   },
+   {
+    "from": 1000,
+    "brier": 0.17255200000000007,
+    "avgBrier": 0.16715477664770628,
+    "truthError": 0.004571956583183103,
+    "alive": 42,
+    "meanNoise": 1.343109604374216,
+    "meanHerd": 0.2219299120322236,
+    "meanConfidence": 1.1306679725634816,
+    "wealth": 30.335425,
+    "maxGen": 6,
+    "births": 1,
+    "deaths": 2
+   },
+   {
+    "from": 1100,
+    "brier": 0.19855199999999992,
+    "avgBrier": 0.19069766990243417,
+    "truthError": 0.006021902266075704,
+    "alive": 41,
+    "meanNoise": 1.3857331017179315,
+    "meanHerd": 0.20491865344951898,
+    "meanConfidence": 1.139867435839521,
+    "wealth": 30.220734,
+    "maxGen": 6,
+    "births": 6,
+    "deaths": 7
+   }
+  ],
+  "params": {
+   "founders": 25,
+   "questions": 1200,
+   "capital": "1000000",
+   "bill": "2000",
+   "bounty": "80000",
+   "treasuryBps": "500",
+   "floor": "150000",
+   "spawnThreshold": "2000000",
+   "endowmentBps": "5000",
+   "spawnCooldown": 10,
+   "maxAlive": 48,
+   "maxStake": "60",
+   "selection": true,
+   "seed": 1
+  }
+ },
+ "control": {
+  "buckets": [
+   {
+    "from": 0,
+    "brier": 0.179725,
+    "avgBrier": 0.17856683839999998,
+    "truthError": 0.015020608662886301,
+    "alive": 25,
+    "meanNoise": 1.198058050442487,
+    "meanHerd": 0.5524587391242385,
+    "meanConfidence": 1.2272224064543844,
+    "wealth": 20,
+    "maxGen": 0,
+    "births": 0,
+    "deaths": 0
+   },
+   {
+    "from": 100,
+    "brier": 0.22468799999999994,
+    "avgBrier": 0.21231105759999994,
+    "truthError": 0.01679142401939888,
+    "alive": 25,
+    "meanNoise": 1.198058050442487,
+    "meanHerd": 0.5524587391242385,
+    "meanConfidence": 1.2272224064543844,
+    "wealth": 15,
+    "maxGen": 0,
+    "births": 0,
+    "deaths": 0
+   },
+   {
+    "from": 200,
+    "brier": 0.1570460000000001,
+    "avgBrier": 0.15944807199999997,
+    "truthError": 0.012365969966466892,
+    "alive": 25,
+    "meanNoise": 1.198058050442487,
+    "meanHerd": 0.5524587391242385,
+    "meanConfidence": 1.2272224064543844,
+    "wealth": 10,
+    "maxGen": 0,
+    "births": 0,
+    "deaths": 0
+   },
+   {
+    "from": 300,
+    "brier": 0.18000500000000005,
+    "avgBrier": 0.18000680921666667,
+    "truthError": 0.012965272173004702,
+    "alive": 25,
+    "meanNoise": 1.1960023272479077,
+    "meanHerd": 0.5522852607036907,
+    "meanConfidence": 1.2252908921465355,
+    "wealth": 5.022,
+    "maxGen": 0,
+    "births": 0,
+    "deaths": 0
+   }
+  ]
+ },
+ "summary": {
+  "selection": [
+   {
+    "earlyBrier": 0.16879775,
+    "lateBrier": 0.20501825000000004,
+    "earlyAvg": 0.17530374777697677,
+    "lateAvg": 0.1960143496310726,
+    "earlyTruth": 0.010050481835053927,
+    "lateTruth": 0.006393864046711812
+   },
+   {
+    "earlyBrier": 0.19490100000000002,
+    "lateBrier": 0.2018935,
+    "earlyAvg": 0.19165054660087086,
+    "lateAvg": 0.19509993247480195,
+    "earlyTruth": 0.011375836696338714,
+    "lateTruth": 0.004410707266124365
+   },
+   {
+    "earlyBrier": 0.19653549999999995,
+    "lateBrier": 0.18315325000000002,
+    "earlyAvg": 0.19550150241811987,
+    "lateAvg": 0.18424835914837157,
+    "earlyTruth": 0.01149358845564944,
+    "lateTruth": 0.006187662281235346
+   },
+   {
+    "earlyBrier": 0.20240575000000005,
+    "lateBrier": 0.188159,
+    "earlyAvg": 0.20500827332824711,
+    "lateAvg": 0.19307215407995174,
+    "earlyTruth": 0.01017769840948321,
+    "lateTruth": 0.005184070887280438
+   },
+   {
+    "earlyBrier": 0.19359925000000006,
+    "lateBrier": 0.17801374999999997,
+    "earlyAvg": 0.19543198648381452,
+    "lateAvg": 0.1759803424874624,
+    "earlyTruth": 0.007521770005854862,
+    "lateTruth": 0.0032543106873412623
+   },
+   {
+    "earlyBrier": 0.19099724999999998,
+    "lateBrier": 0.17662900000000004,
+    "earlyAvg": 0.1863333787134476,
+    "lateAvg": 0.17550354395999782,
+    "earlyTruth": 0.011839940667528344,
+    "lateTruth": 0.006421154735683557
+   },
+   {
+    "earlyBrier": 0.19908775000000004,
+    "lateBrier": 0.18681850000000003,
+    "earlyAvg": 0.19884486459250686,
+    "lateAvg": 0.1877870279813477,
+    "earlyTruth": 0.011720444215459407,
+    "lateTruth": 0.0031264942712205973
+   },
+   {
+    "earlyBrier": 0.18262300000000004,
+    "lateBrier": 0.20686299999999996,
+    "earlyAvg": 0.18416983973553452,
+    "lateAvg": 0.2006719551840391,
+    "earlyTruth": 0.011854753848312473,
+    "lateTruth": 0.00703359892451312
+   }
+  ],
+  "control": [
+   {
+    "earlyBrier": 0.179725,
+    "lateBrier": 0.18000500000000005,
+    "earlyAvg": 0.17856683839999998,
+    "lateAvg": 0.18000680921666667,
+    "earlyTruth": 0.015020608662886301,
+    "lateTruth": 0.012965272173004702
+   },
+   {
+    "earlyBrier": 0.2338979999999999,
+    "lateBrier": 0.20436900000000002,
+    "earlyAvg": 0.22473310560000004,
+    "lateAvg": 0.1982205919260029,
+    "earlyTruth": 0.015027388915076495,
+    "lateTruth": 0.01725778937844895
+   },
+   {
+    "earlyBrier": 0.21623199999999998,
+    "lateBrier": 0.194925,
+    "earlyAvg": 0.20665673439999996,
+    "lateAvg": 0.19279291250893194,
+    "earlyTruth": 0.020447995332933747,
+    "lateTruth": 0.021648000453138364
+   },
+   {
+    "earlyBrier": 0.19948999999999997,
+    "lateBrier": 0.24067699999999984,
+    "earlyAvg": 0.19340762240000003,
+    "lateAvg": 0.2261179870633756,
+    "earlyTruth": 0.024102257229405812,
+    "lateTruth": 0.016418725136472995
+   },
+   {
+    "earlyBrier": 0.22214200000000017,
+    "lateBrier": 0.18118499999999998,
+    "earlyAvg": 0.2183289664,
+    "lateAvg": 0.1781121688805555,
+    "earlyTruth": 0.009325138666452026,
+    "lateTruth": 0.011519820910023706
+   },
+   {
+    "earlyBrier": 0.173643,
+    "lateBrier": 0.24503899999999995,
+    "earlyAvg": 0.1734917216,
+    "lateAvg": 0.23703541509465442,
+    "earlyTruth": 0.015169412831583491,
+    "lateTruth": 0.01855184503342488
+   },
+   {
+    "earlyBrier": 0.23244799999999993,
+    "lateBrier": 0.18359299999999998,
+    "earlyAvg": 0.224393504,
+    "lateAvg": 0.1838123216,
+    "earlyTruth": 0.019785272004883593,
+    "lateTruth": 0.016227133408317208
+   },
+   {
+    "earlyBrier": 0.230015,
+    "lateBrier": 0.206559,
+    "earlyAvg": 0.2197218384,
+    "lateAvg": 0.19696715106695029,
+    "earlyTruth": 0.016656631958654387,
+    "lateTruth": 0.020218153431126634
+   }
+  ],
+  "improved": 8,
+  "beatControl": 8
+ },
+ "lies": {
+  "trials": 400,
+  "crowd": 24,
+  "lieWins": 359,
+  "meanBestGainPct": 0.6616166052047839,
+  "meanRandomLiePct": -12.685172512942486
+ },
+ "habits": [
+  {
+   "label": "exaggerate by 5 points",
+   "meanPct": -0.3927388570249269
+  },
+  {
+   "label": "exaggerate by 15 points",
+   "meanPct": -2.925725736486022
+  },
+  {
+   "label": "hedge by 5 points",
+   "meanPct": -0.7098132020220779
+  },
+  {
+   "label": "hedge by 15 points",
+   "meanPct": -5.96537211290313
+  }
+ ],
+ "pumps": [
+  {
+   "share": 0.1,
+   "trials": 2000,
+   "honestPriceError": 1.6985,
+   "pumpedPriceError": 1.8905,
+   "whaleLossPerPump": 0.7789599999999991,
+   "losingPumps": 0.5905
+  },
+  {
+   "share": 0.25,
+   "trials": 2000,
+   "honestPriceError": 1.6985,
+   "pumpedPriceError": 2.7655,
+   "whaleLossPerPump": 5.1533200000000114,
+   "losingPumps": 0.82
+  },
+  {
+   "share": 0.5,
+   "trials": 2000,
+   "honestPriceError": 1.6985,
+   "pumpedPriceError": 5.282,
+   "whaleLossPerPump": 21.76799000000005,
+   "losingPumps": 0.9865
+  },
+  {
+   "share": 1,
+   "trials": 2000,
+   "honestPriceError": 1.6985,
+   "pumpedPriceError": 15.5935,
+   "whaleLossPerPump": 128.89391000000012,
+   "losingPumps": 1
+  }
+ ]
+}
