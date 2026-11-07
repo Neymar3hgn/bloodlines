@@ -10,6 +10,7 @@ export type Network = "testnet" | "mainnet";
  */
 const realFetch = globalThis.fetch;
 const SPACING_MS = Number(process.env.CLADE_RPC_SPACING ?? 170);
+const RPC_TIMEOUT_MS = 20_000;
 let nextSlot = 0;
 
 async function pacedFetch(input: Parameters<typeof fetch>[0], init?: RequestInit): Promise<Response> {
@@ -20,7 +21,12 @@ async function pacedFetch(input: Parameters<typeof fetch>[0], init?: RequestInit
     const slot = Math.max(now, nextSlot);
     nextSlot = slot + SPACING_MS;
     if (slot > now) await new Promise((r) => setTimeout(r, slot - now));
-    const res = await realFetch(input, init);
+    // A public RPC can hang for minutes. A short limit lets the caller retry in time.
+    const res = await realFetch(input, { ...init, signal: AbortSignal.timeout(RPC_TIMEOUT_MS) }).catch((e: unknown) => {
+      if (attempt >= 10) throw e;
+      return null;
+    });
+    if (res === null) continue;
     const limited = res.status === 429 || (res.status === 200 && /"code":\s*-429/.test(await res.clone().text()));
     if (!limited || attempt >= 10) return res;
     const pause = 1200 * (attempt + 1);

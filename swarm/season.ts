@@ -16,7 +16,7 @@ const arg = (name: string, dflt: string) => {
 const ai = process.argv.includes("--ai");
 const count = Number(arg("questions", "12"));
 const offset = Number(arg("offset", "0"));
-const timing = { commitSecs: Number(arg("commit", "16")), revealSecs: Number(arg("reveal", "60")) };
+const timing = { commitSecs: Number(arg("commit", "16")), revealSecs: Number(arg("reveal", "120")) };
 const settings = defaults(ai);
 
 const questions: (RoundInput & { yes: boolean })[] = JSON.parse(readFileSync("data/questions.json", "utf8")).questions;

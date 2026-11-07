@@ -82,7 +82,7 @@ async function open(count: number, hours: number, ai: boolean) {
     const q = await playRound(
       { id: String(m.id), text, detail: String(m.description ?? "").replace(/\s+/g, " ").slice(0, 700), category: categorize(text), asOf: today, source: source.slice(0, 256) },
       cfg,
-      { commitSecs: Number(arg("commit", "16")), revealSecs: Number(arg("reveal", "60")) },
+      { commitSecs: Number(arg("commit", "16")), revealSecs: Number(arg("reveal", "120")) },
       settings,
     );
     if (q !== null) {

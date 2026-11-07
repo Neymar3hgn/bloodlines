@@ -207,14 +207,7 @@ export async function playRound(q: RoundInput, cfg: { max_stake: number }, timin
   const live = plans.filter((_, i) => committed[i]);
   await c.waitForRevealWindow(id);
 
-  for (let i = 0; i < live.length; i += s.batchSize) {
-    await c.revealBatch(id, live.slice(i, i + s.batchSize)).catch((e) => console.log(`  reveal batch failed: ${String(e.message).slice(0, 100)}`));
-  }
-  for (let i = 0; i < 40; i++) {
-    const st = await c.getQuestion(id);
-    if (st.reveals >= st.commits) break;
-    await c.sleep(1000);
-  }
+  await revealEveryone(id, live, s);
   const before = await c.getQuestion(id);
   if (before.reveals < before.commits) {
     const wait = before.reveal_end_ms - Date.now() + 1500;
@@ -222,8 +215,37 @@ export async function playRound(q: RoundInput, cfg: { max_stake: number }, timin
   }
   await c.clear(id);
   const done = await c.getQuestion(id);
+  if (done.status === "Void") {
+    console.log("  nobody revealed, so the round is void and the bounty goes back");
+    await c.sweep([done.opener]);
+    return null;
+  }
   console.log(`  ${done.reveals} agents, the swarm says ${done.price}%, matched ${done.matched}`);
   return id;
+}
+
+/**
+ * Reveals land through a public RPC, which can fail or hang. So this reads who has
+ * really revealed and resends only the rest until the window closes. Resending is
+ * safe: an agent that already revealed has no commit left, so the contract refuses
+ * the copy and the Intents contract refunds it.
+ */
+async function revealEveryone(id: number, plans: c.OrderPlan[], s: Settings) {
+  for (let pass = 0; pass < 6; pass++) {
+    const q = await c.getQuestion(id);
+    const done = new Set((await c.getOrders(id)).map((o) => o.agent));
+    const todo = plans.filter((p) => !done.has(p.agent));
+    if (todo.length === 0) return;
+    if (Date.now() > q.reveal_end_ms - 4000) {
+      console.log(`  the reveal window closed with ${todo.length} agents unrevealed`);
+      return;
+    }
+    if (pass > 0) console.log(`  resending ${todo.length} reveals`);
+    for (let i = 0; i < todo.length; i += s.batchSize) {
+      await c.revealBatch(id, todo.slice(i, i + s.batchSize)).catch((e) => console.log(`  a reveal batch failed: ${String(e.message).slice(0, 100)}`));
+    }
+    await c.sleep(3000);
+  }
 }
 
 /** Records what happened, for the next time a parent rewrites its strategy. */
