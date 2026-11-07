@@ -78,7 +78,11 @@ const TOOLS = [
 const reply = (id: unknown, result: unknown) => process.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id, result })}\n`);
 const fail = (id: unknown, code: number, message: string) => process.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id, error: { code, message } })}\n`);
 
-for await (const line of createInterface({ input: process.stdin })) {
+const BOM = String.fromCharCode(0xfeff);
+
+for await (const raw of createInterface({ input: process.stdin })) {
+  // Some shells prepend a byte order mark when piping.
+  const line = raw.startsWith(BOM) ? raw.slice(1) : raw;
   if (!line.trim()) continue;
   let msg: any;
   try {

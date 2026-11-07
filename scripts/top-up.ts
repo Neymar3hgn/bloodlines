@@ -1,4 +1,4 @@
-﻿/** Moves NEAR from the colony account to the keeper, which pays for gas. Usage: node scripts/top-up.ts 1.5 */
+/** Moves NEAR from the colony account to the keeper, which pays for gas. Usage: node scripts/top-up.ts 1.5 */
 import { actions } from "near-api-js";
 import { account, nearBalance } from "../swarm/chain.ts";
 import { deployment } from "../swarm/colony.ts";

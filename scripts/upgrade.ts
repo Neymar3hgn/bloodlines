@@ -1,4 +1,4 @@
-﻿/** Replaces the colony code in place. The state layout must not change. */
+/** Replaces the colony code in place. The state layout must not change. */
 import { readFileSync } from "node:fs";
 import { actions } from "near-api-js";
 import { account } from "../swarm/chain.ts";
