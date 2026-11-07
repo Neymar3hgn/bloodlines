@@ -2,15 +2,15 @@
  "colony": "clade.testnet",
  "verifier": "verifier.tidepool-sandbox.testnet",
  "network": "testnet",
- "at": "2026-11-07T14:57:53.839Z",
- "passed": 51,
- "total": 52,
+ "at": "2026-11-07T15:10:28.547Z",
+ "passed": 52,
+ "total": 53,
  "results": [
   {
    "rule": "R1",
    "claim": "every agent is a real account named under its parent",
    "ok": true,
-   "detail": "eariky.clade.testnet"
+   "detail": "ea7kem.clade.testnet"
   },
   {
    "rule": "R3",
@@ -21,8 +21,8 @@
   {
    "rule": "R3",
    "claim": "an agent's key cannot call any other contract",
-   "ok": true,
-   "detail": "Access key receiver clade.testnet does not match transaction receiver verifier.tidepool-sa"
+   "ok": false,
+   "detail": "Not enough balance for ea7kem.clade.testnet (balance: 29999999999999999999999, cost: 30919"
   },
   {
    "rule": "R2",
@@ -148,7 +148,7 @@
    "rule": "R1",
    "claim": "a child's account exists, named under its parent",
    "ok": true,
-   "detail": "chriky.ebriky.clade.testnet"
+   "detail": "ch7kem.eb7kem.clade.testnet"
   },
   {
    "rule": "R12",
@@ -196,7 +196,7 @@
    "rule": "R13",
    "claim": "a broke agent's account is deleted from the chain",
    "ok": true,
-   "detail": "chriky.ebriky.clade.testnet"
+   "detail": "ch7kem.eb7kem.clade.testnet"
   },
   {
    "rule": "R13",
@@ -226,7 +226,7 @@
    "rule": "R14",
    "claim": "a child keeps running after its parent is deleted",
    "ok": true,
-   "detail": "orriky.eeriky.clade.testnet"
+   "detail": "or7kem.ee7kem.clade.testnet"
   },
   {
    "rule": "R14",
@@ -289,6 +289,12 @@
    "detail": ""
   },
   {
+   "rule": "R13",
+   "claim": "an agent with an open position cannot be reaped, and the refusal says why",
+   "ok": true,
+   "detail": "Smart contract panicked: agent has open positions"
+  },
+  {
    "rule": "R25",
    "claim": "a question with no result can be voided by anyone",
    "ok": true,
@@ -315,8 +321,8 @@
   {
    "rule": "R12",
    "claim": "two births requested at once cannot both pass the cooldown",
-   "ok": false,
-   "detail": "0 born"
+   "ok": true,
+   "detail": "1 born"
   }
  ]
 }

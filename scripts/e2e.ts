@@ -71,7 +71,8 @@ const fc = perm?.FunctionCall ?? perm?.functionCall ?? perm;
 const receiver = fc?.receiver_id ?? fc?.receiverId;
 check("R3", "an agent has one key, and it only reaches the colony", keys.keys.length === 1 && receiver === colony, JSON.stringify(fc?.method_names ?? fc?.methodNames ?? []));
 
-let err = await rejects(() => account(a).callFunction({ contractId: verifier, methodName: "mt_balance_of", args: { account_id: a, token_id: tokenId } } as never));
+// A small gas limit, so the refusal comes from the key and not from the agent's low balance.
+let err = await rejects(() => account(a).callFunction({ contractId: verifier, methodName: "mt_balance_of", args: { account_id: a, token_id: tokenId }, gas: 5_000_000_000_000n } as never));
 check("R3", "an agent's key cannot call any other contract", /does not match|receiver/i.test(err ?? ""), (err ?? "").slice(0, 90));
 
 err = await rejects(() => account(a).callFunction({ contractId: colony, methodName: "add_founder", args: { label: "x", public_key: loadKey(a).public_key, genome: "x" }, gas: 100_000_000_000_000n } as never));
