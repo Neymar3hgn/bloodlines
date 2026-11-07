@@ -102,7 +102,7 @@ run `npm run snapshot` and push to update it.
 
 ## Things only you can do
 
-- Provide the NEAR AI key: `NEARAI_API_KEY` in a local `.env` file, not in chat
+- Provide the NEAR AI key, set as a user environment variable and never pasted in chat. The steps after that are in [ai-run.md](ai-run.md)
 - Publish the repo and host the site
 - Record or approve the video, and post it on X
 - Run any real-money mainnet steps
