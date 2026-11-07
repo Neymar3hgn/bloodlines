@@ -1,0 +1,5 @@
+# near-sdk only uses NEAR's host functions when built with this flag. cargo-near sets
+# it automatically. Without it, hashing runs as slow local code, the contract is much
+# larger, and every failed rule is a silent trap instead of a readable message.
+[target.wasm32-unknown-unknown]
+rustflags = ["--cfg", "near"]

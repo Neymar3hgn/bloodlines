@@ -11,7 +11,7 @@
  *   node swarm/experiment.ts --replay                      no key, no cost, same result
  *   node swarm/experiment.ts --scripted                    test the machinery with fake forecasts
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { clear, lockFor, settle, type Order } from "../engine/market.ts";
 import { inPool } from "./chain.ts";
 import { childLabel, engages, gaussian, mutateNumbers, toOrder, type Genome, type Rng } from "./genome.ts";
@@ -416,6 +416,18 @@ const singles = [...fx.perMember.entries()].map(([id, list]) => ({ id, brier: av
 singles.sort((a, b) => a.brier - b.brier);
 const coinFlip = 0.25;
 
+// What real people with real money said on the same date, when the source has it.
+const crowdPrices: Record<string, number> = existsSync("data/crowd.json") ? JSON.parse(readFileSync("data/crowd.json", "utf8")) : {};
+const withCrowd = exam.map((q, i) => ({ q, i })).filter(({ q }) => crowdPrices[q.id] !== undefined);
+const crowd = withCrowd.length
+  ? {
+      questions: withCrowd.length,
+      crowd: avg(withCrowd.map(({ q }) => brier(crowdPrices[q.id], q.yes))),
+      foundersOnTheseQuestions: avg(withCrowd.map(({ i }) => fb[i])),
+      survivorsOnTheseQuestions: avg(withCrowd.map(({ i }) => sb[i])),
+    }
+  : null;
+
 const models = new Map<string, { b: number[]; cost: number }>();
 for (const m of founderPop.members) {
   const list = fx.perMember.get(m.id) ?? [];
@@ -459,6 +471,7 @@ const report = {
     pairedDifference: test,
     verdict,
     survivorsCount: survivorPop.members.length,
+    humanCrowd: crowd,
   },
   modelLeaderboard: leaderboard,
 };
@@ -471,5 +484,6 @@ console.log(`  Best founder, in hindsight: ${singles[0].brier.toFixed(4)} (${sin
 console.log(`  Median founder            : ${singles[Math.floor(singles.length / 2)].brier.toFixed(4)}`);
 console.log(`  Improvement: ${test.mean.toFixed(4)}, 95% interval ${test.low.toFixed(4)} to ${test.high.toFixed(4)}`);
 console.log(`  Verdict: ${verdict}`);
+if (crowd) console.log(`  Human crowd on the same ${crowd.questions} questions: ${crowd.crowd.toFixed(4)} (survivors ${crowd.survivorsOnTheseQuestions.toFixed(4)})`);
 console.log(`Spent $${spent.toFixed(2)}, ${calls} new calls, ${cached} cached, ${verifiedReceipts} verified signatures`);
 for (const l of leaderboard) console.log(`  ${l.model.padEnd(40)} ${l.brier.toFixed(4)}  $${l.costPerThousand.toFixed(3)} per 1000`);

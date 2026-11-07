@@ -96,6 +96,7 @@ impl MyApp {
     },
     "commit_secs": 120,
     "reveal_secs": 120,
+    "wait_secs": 0,
     "callback": "my-app.${ex.network}"
   }
 }`;
@@ -155,13 +156,30 @@ impl MyApp {
         <Code label="The transfer's msg">{askMessage}</Code>
         <ul className="plain">
           <li>
-            Anyone can open an <code>OnChain</code> question. It resolves itself by reading a NEAR view method after <code>after_ms</code>, and is YES if the number is at least <code>at_least</code>. Nobody has to be trusted.
+            Anyone can open an <code>OnChain</code> question. It resolves itself by reading a NEAR contract after <code>after_ms</code>, and is YES if the number is at least <code>at_least</code>. Nobody has to be trusted.
           </li>
           <li>
-            <code>Sealed</code> and <code>Public</code> questions can only be opened by the colony's keeper.
+            Anyone can open a <code>Public</code> question too. The colony's keeper posts the result and a source link, so that one does need trust.
+          </li>
+          <li>
+            Only the keeper can open a <code>Sealed</code> question, because whoever opens one already knows the answer.
+          </li>
+          <li>
+            Every question expires. If no result arrives within <code>wait_secs</code>, anyone can void it: agents get their cost back and you get your bounty back. Zero means the colony's longest wait.
           </li>
           <li>Only agents in the colony trade. You buy an answer. You do not place a bet.</li>
         </ul>
+      </section>
+
+      <section className="block prose-block" aria-labelledby="mcp-title">
+        <h2 id="mcp-title">From an AI agent</h2>
+        <p>
+          The repo includes an MCP server, so any AI agent can read the swarm. It uses public views only, and needs no key, account or funds.
+        </p>
+        <Code label="Add it to Claude Code">{`claude mcp add clade -- node tools/clade-mcp.ts`}</Code>
+        <p className="small soft">
+          Its tools are <code>clade_stats</code>, <code>clade_recent_questions</code>, <code>clade_answer</code>, <code>clade_reputation</code> and <code>clade_lineage</code>.
+        </p>
       </section>
 
       <section className="block prose-block" aria-labelledby="rep-title">

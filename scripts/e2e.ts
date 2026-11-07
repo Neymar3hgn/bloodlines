@@ -219,6 +219,8 @@ check("R14", "an orphan can still trade under its dead parent's name", (await c.
 await c.clear(q2);
 await c.resolveSealed(q2, orphanSeal.yes, orphanSeal.salt);
 await c.settle(q2);
+await c.sweep([orphan]);
+await c.sleep(2500);
 
 // ---------- The swarm as a public oracle ----------
 if (await exists(asker)) {
@@ -317,6 +319,15 @@ if (await exists(asker)) {
   const victimAlive = await exists(victim);
   check("R21", "an asker cannot make the colony kill an agent", victimAlive && (await c.getAgent(victim)).status === "Alive", "the reader has no authority");
   check("R21", "an asker cannot steal an agent's money", (await c.creditsOf(attacker)) < attackerBefore + victimBefore / 2n);
+
+  // The rules must say why they refused, so a transaction can be read on an explorer.
+  err = await rejects(() => c.reap(victim));
+  check("R13", "an agent with an open position cannot be reaped, and the refusal says why", /open positions/.test(err ?? ""), (err ?? "").slice(0, 90));
+
+  await c.voidQuestion(qa, "attack test, no result");
+  await c.settle(qa);
+  await c.sweep([a, b]);
+  await c.sleep(3000);
 
   // R25: if no result ever comes, the money still comes back.
   const qe = await c.openQuestion({ text: `Expiry test ${tag}`, category: "test", resolver: "Public", commitSecs: 8, revealSecs: 25, waitSecs: 2, bounty: 30_000n });

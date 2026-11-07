@@ -6,7 +6,7 @@
  */
 import { readFileSync } from "node:fs";
 import * as c from "./colony.ts";
-import { colonyConfig, defaults, ensureFounders, finishRound, fundFounders, playRound, selection, type RoundInput } from "./runner.ts";
+import { colonyConfig, defaults, ensureFounders, finishRound, fundFounders, playRound, refuel, selection, type RoundInput } from "./runner.ts";
 
 const arg = (name: string, dflt: string) => {
   const i = process.argv.indexOf(`--${name}`);
@@ -27,7 +27,9 @@ await ensureFounders(Number(arg("founders", "16")));
 await c.finishOpenWork();
 await fundFounders();
 
+let played = 0;
 for (const q of questions.slice(offset, offset + count)) {
+  if (played++ % 12 === 11) await refuel();
   const id = await playRound(q, cfg, timing, settings);
   if (id === null) continue;
   await c.resolveSealed(id, q.yes, c.sealFor(id, await c.getQuestion(id)));

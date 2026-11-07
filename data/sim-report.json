@@ -384,6 +384,13 @@
   "improved": 8,
   "beatControl": 8
  },
+ "exams": {
+  "questions": 2000,
+  "founderError": 0.017513480840830348,
+  "evolvedError": 0.004845339638460148,
+  "wins": 8,
+  "seeds": 8
+ },
  "lies": {
   "trials": 400,
   "crowd": 24,

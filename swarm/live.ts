@@ -11,7 +11,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import * as c from "./colony.ts";
 import { categorize } from "./questions.ts";
-import { colonyConfig, defaults, ensureFounders, finishRound, fundFounders, playRound, selection } from "./runner.ts";
+import { colonyConfig, defaults, ensureFounders, finishRound, fundFounders, playRound, refuel, selection } from "./runner.ts";
 
 const API = "https://gamma-api.polymarket.com/markets";
 const STORE = `data/live.${c.deployment.network}.${c.deployment.colony}.json`;
@@ -71,6 +71,7 @@ async function open(count: number, hours: number, ai: boolean) {
   await ensureFounders();
   await c.finishOpenWork();
   await fundFounders();
+  await refuel();
   const today = new Date().toISOString().slice(0, 10);
   const taken = new Set(tracked.map((t) => t.market));
   const fresh = (await upcoming(hours)).filter((m) => !taken.has(String(m.id))).slice(0, count);

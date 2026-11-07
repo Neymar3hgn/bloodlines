@@ -5,7 +5,8 @@
  */
 import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { exists, inPool, view } from "./chain.ts";
+import { actions } from "near-api-js";
+import { account, exists, inPool, nearBalance, view } from "./chain.ts";
 import * as c from "./colony.ts";
 import { childLabel, engages, gaussian, mutateNumbers, toOrder, type Genome, type Rng } from "./genome.ts";
 import { founders, MODELS } from "./founders.ts";
@@ -96,6 +97,24 @@ export async function fundFounders() {
     console.log(`  granted capital to ${empty.length} agents`);
     await c.sleep(2500);
   }
+}
+
+/**
+ * Agents hold very little NEAR, and each commit burns a tiny amount. The keeper tops
+ * up any agent running low, so an agent never goes quiet just because it ran out of gas.
+ */
+export async function refuel(minNear = 0.016, topUp = 0.02) {
+  const agents = await living();
+  const held = await inPool(agents, 3, (r) => nearBalance(r.id));
+  const low = agents.filter((_, i) => held[i] < minNear);
+  for (const r of low) {
+    await account(c.deployment.keeper).signAndSendTransaction({
+      receiverId: r.id,
+      actions: [actions.transfer(BigInt(Math.round(topUp * 1e6)) * 10n ** 18n)],
+      waitUntil: "EXECUTED_OPTIMISTIC",
+    } as never);
+  }
+  if (low.length) console.log(`  refuelled ${low.length} agents`);
 }
 
 export interface Thought {

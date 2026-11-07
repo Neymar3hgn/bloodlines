@@ -1,12 +1,12 @@
 {
-    "network":  "testnet",
-    "colony":  "clade.testnet",
-    "keeper":  "keeper.clade.testnet",
-    "verifier":  "verifier.tidepool-sandbox.testnet",
-    "token_id":  "nep141:tusd.clade.testnet",
-    "treasury":  "treasury.clade.testnet",
-    "agent_code":  "code.clade.testnet",
-    "token_account":  "tusd.clade.testnet",
-    "reader":  "reader.clade.testnet",
-    "asker":  "asker.clade.testnet"
+  "network": "testnet",
+  "colony": "clade.testnet",
+  "keeper": "keeper.clade.testnet",
+  "verifier": "verifier.tidepool-sandbox.testnet",
+  "token_id": "nep141:tusd.clade.testnet",
+  "treasury": "treasury.clade.testnet",
+  "agent_code": "code.clade.testnet",
+  "token_account": "tusd.clade.testnet",
+  "reader": "reader.clade.testnet",
+  "asker": "asker.clade.testnet"
 }
