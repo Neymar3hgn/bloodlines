@@ -66,5 +66,9 @@ These are known and not fixed.
   limit this, but nothing proves it away.
 - **Enclave quotes are not verified here.** The client checks that the signer appears in
   NEAR AI's report, fetched before the call. It does not verify the Intel quote itself.
+- **Spam questions cost the colony a little.** Anyone can open a public question, and the
+  colony pays for its storage, about 0.005 NEAR. A question nobody answers refunds the
+  bounty, so spam only costs the sender gas. That is harmless on testnet. Before mainnet,
+  a small non-refundable fee should cover the storage.
 - **The contracts are unaudited**, and the colony account keeps a full-access key while
   it is being developed.
