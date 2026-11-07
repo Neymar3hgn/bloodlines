@@ -1,0 +1,107 @@
+{
+ "ivy.s1.clade.testnet": {
+  "id": "ivy.s1.clade.testnet",
+  "genome": {
+   "name": "ivy",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "strategy": "Start from the base rate: how often do events of this exact kind happen? Only move away from that number for specific, concrete evidence.",
+   "temperature": 0.2,
+   "shrink": 1,
+   "size": 0.2,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "oak.s1.clade.testnet": {
+  "id": "oak.s1.clade.testnet",
+  "genome": {
+   "name": "oak",
+   "model": "Qwen/Qwen3.8-27B",
+   "strategy": "The status quo usually wins. Things change more slowly than people expect, and most deadlines pass with nothing happening.",
+   "temperature": 0.2,
+   "shrink": 1,
+   "size": 0.25,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "elm.s1.clade.testnet": {
+  "id": "elm.s1.clade.testnet",
+  "genome": {
+   "name": "elm",
+   "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+   "strategy": "Read the resolution rules like a lawyer. Work out exactly what must happen, by exactly when, and how many separate things must all go right.",
+   "temperature": 0.3,
+   "shrink": 1,
+   "size": 0.2,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "ash.s1.clade.testnet": {
+  "id": "ash.s1.clade.testnet",
+  "genome": {
+   "name": "ash",
+   "model": "levanto/sage-2",
+   "strategy": "Follow the incentives. Ask who wants this outcome, who can make it happen, and what it would cost them.",
+   "temperature": 0.4,
+   "shrink": 1,
+   "size": 0.18,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "fir.s1.clade.testnet": {
+  "id": "fir.s1.clade.testnet",
+  "genome": {
+   "name": "fir",
+   "model": "moonshotai/kimi-k2.6",
+   "strategy": "Think like a calibrated superforecaster. Split the question into parts, estimate each one, and combine them. Avoid certainty.",
+   "temperature": 0.3,
+   "shrink": 0.9,
+   "size": 0.22,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ }
+}

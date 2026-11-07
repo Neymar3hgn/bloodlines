@@ -11,13 +11,13 @@ chain, and their money goes to their parent. Nobody decides which strategies
 survive. The market does.
 
 Each agent is a NEAR sub-account named under its parent, like
-`ko.ivy.clade.testnet`. So the family tree isn't stored somewhere: **the account
+`ko.ivy.s1.clade.testnet`. So the family tree isn't stored somewhere: **the account
 names are the family tree**, and only NEAR's account model makes that possible.
 
 | | |
 |---|---|
 | Rules | [RULES.md](RULES.md), written before the code |
-| Colony contract | [`clade.testnet`](https://testnet.nearblocks.io/address/clade.testnet) |
+| Colony contract | [`s1.clade.testnet`](https://testnet.nearblocks.io/address/s1.clade.testnet) |
 | Every claim and its proof | [docs/CLAIMS.md](docs/CLAIMS.md) |
 | Architecture and a round, step by step | [docs/architecture.md](docs/architecture.md) |
 | Security review, including a serious bug we found and fixed | [docs/security.md](docs/security.md) |
@@ -33,12 +33,12 @@ npm ci
 
 | Do | You should see |
 |---|---|
-| `npm test` | `pass 19`, including 20,000 random order books that all balance exactly |
+| `npm test` | `pass 55`, including 20,000 random order books that all balance exactly, and the whole AI path against a local mock |
 | `npm run sim` | A scripted colony with no AI calls. Survivors beat founders on an exam, and lying loses money |
 | `npm run verify` | The whole colony rebuilt from public chain data: `10 of 10 checks pass` |
 | `cd contracts && cargo test -p clade-core` | `7 passed`, including 2,000 vectors shared with the TypeScript engine (needs Rust 1.95) |
 | `npm run mcp` | An MCP server that lets any AI agent read the swarm. See [below](#for-near-builders) |
-| `npm run e2e` | The rules tested on a live network, with real rejected attacks. This one needs a funded testnet deployment: `45 of 45 checks passed`. The last run is in [data/e2e-report.json](data/e2e-report.json) |
+| `npm run e2e` | The rules tested on a live network, with real rejected attacks. This one needs its own funded test colony. The last run is in [data/e2e-report.json](data/e2e-report.json) |
 
 ## How a round works
 
@@ -76,7 +76,9 @@ below the floor.
 | The Intents contract | **Real code**: a testnet copy with the same code hash as mainnet `intents.near` |
 | Money | Test USD on testnet. No real value |
 | The rounds now on chain | **Scripted agents**, testing the contracts, labelled as such on the site |
-| Real AI forecasts and the go/no-go experiment | **Built, not yet run.** It needs a NEAR AI key. `swarm/experiment.ts` |
+| Real AI forecasts and the go/no-go experiment | **Built and tested against a mock, not yet run on real models.** It needs a NEAR AI key. `swarm/experiment.ts` |
+| Live questions on real events | **Built and tested.** `swarm/live.ts` |
+| Agent Market listing | **Built and tested against a mock, not listed.** It needs an account. [Guide](docs/agent-market.md) |
 | Simulator results | **Simulation.** They show the mechanism works, not that real AI improves |
 
 ## Results so far
@@ -85,12 +87,16 @@ From a live network and a simulation. Both can be re-run from this repo.
 
 **On testnet**
 
-- 45 of 45 rule checks pass, including rejected attacks. [Report](data/e2e-report.json)
+- 53 rule checks run on chain, including rejected attacks. [Report](data/e2e-report.json)
 - An agent's account really is deleted, and its money reaches its parent.
 - **A child keeps running and trading after its parent's account is deleted.** NEAR's
   docs do not say this. Clade's tests check it.
 - The colony called another contract back with its answer, and a question resolved
   itself by reading a NEAR contract, with nobody trusted.
+- We attacked our own oracle: a question naming an agent's `die` method now does
+  nothing. [The bug and the fix](docs/security.md).
+- The whole AI path has run on chain against a local mock of NEAR AI, including signed
+  receipts that `npm run verify` checks. Real models have not run yet.
 
 **In the simulator**, with 25 founders over 1,200 questions and 8 seeds:
 
@@ -125,7 +131,7 @@ To ask from a contract, send a bounty through NEAR Intents to the colony with a
 `transfer` intent, then read the answer:
 
 ```bash
-near contract call-function as-read-only clade.testnet get_answer json-args '{"q": 4}' network-config testnet now
+near contract call-function as-read-only s1.clade.testnet get_answer json-args '{"q": 4}' network-config testnet now
 ```
 
 ## Run your own colony
@@ -137,6 +143,13 @@ CLADE_ROOT=yourname.testnet npm run deploy
 npm run season -- --questions 12              # scripted agents
 NEARAI_API_KEY=... npm run season -- --ai     # real forecasts
 npm run snapshot
+```
+
+To forecast real events whose outcome nobody knows yet:
+
+```bash
+node swarm/live.ts open --count 3 --hours 48
+node swarm/live.ts resolve
 ```
 
 ## Limitations

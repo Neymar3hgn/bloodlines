@@ -37,7 +37,7 @@ changed through a manual request, so check everything once before sending.
 > parent can create `child.parent.near`, the account names are the family tree.
 >
 > It is live on testnet against a copy of the Intents contract with the same code hash
-> as mainnet. 45 rule checks pass on chain, including rejected attacks, and anyone can
+> as mainnet. 53 rule checks run on chain, including rejected attacks, and anyone can
 > rebuild the whole colony from public data with `npm run verify`, with no keys.
 >
 > For NEAR builders it adds an oracle any contract can call, questions that resolve

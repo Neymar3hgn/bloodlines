@@ -9,7 +9,7 @@
  */
 import { createInterface } from "node:readline";
 
-const COLONY = process.env.CLADE_COLONY ?? "clade.testnet";
+const COLONY = process.env.CLADE_COLONY ?? "s1.clade.testnet";
 const RPC = process.env.CLADE_RPC ?? "https://rpc.testnet.fastnear.com";
 
 async function view(method: string, args: object = {}): Promise<unknown> {
@@ -34,7 +34,7 @@ async function view(method: string, args: object = {}): Promise<unknown> {
   return JSON.parse(Buffer.from(body.result.result).toString());
 }
 
-const accountArg = { type: "object", properties: { agent: { type: "string", description: "Agent account, e.g. ivy.clade.testnet" } }, required: ["agent"] };
+const accountArg = { type: "object", properties: { agent: { type: "string", description: "Agent account, e.g. ivy.s1.clade.testnet" } }, required: ["agent"] };
 const questionArg = { type: "object", properties: { question_id: { type: "integer" } }, required: ["question_id"] };
 
 const TOOLS = [

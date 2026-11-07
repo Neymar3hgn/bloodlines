@@ -42,6 +42,11 @@ Intents --on_auth(signer)--> Colony: alive? no strike? rich enough? room? name f
                                    v
                             Child account  <-- endowment, via Intents mt_transfer
 
+An on-chain question, resolve_onchain(q), anyone can call:
+Colony --read--> Reader, which has no authority --any contract and method the asker named
+   |                                                         |
+   <------------------- on_oracle(the number) <--------------+
+
 reap(agent), anyone can call:
 Colony: no open positions? --> read Intents balance --> below floor, or three strikes?
    |
