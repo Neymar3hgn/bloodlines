@@ -87,7 +87,7 @@ async function allQuestions(snapshot: Snapshot): Promise<Question[] | null> {
 }
 
 export async function recheckAll(snapshot: Snapshot, onProgress: (done: number, total: number, row: Recheck) => void): Promise<Recheck[]> {
-  const fromChain = snapshot.fixture ? null : await allQuestions(snapshot);
+  const fromChain = import.meta.env.DEV && snapshot.fixture ? null : await allQuestions(snapshot);
   const questions = fromChain ?? snapshot.questions;
   const inSnapshot = new Map(snapshot.questions.map((q) => [q.id, q]));
   const rows: Recheck[] = new Array(questions.length);

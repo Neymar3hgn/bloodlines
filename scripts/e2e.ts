@@ -19,12 +19,14 @@ function check(rule: string, claim: string, ok: boolean, detail = "") {
   console.log(`${ok ? "PASS" : "FAIL"}  ${rule.padEnd(5)} ${claim}${detail ? `  (${detail})` : ""}`);
 }
 
+/** Returns why a call was refused, looking inside a failover error for the real reason. */
 async function rejects(fn: () => Promise<unknown>): Promise<string | null> {
   try {
     await fn();
     return null;
   } catch (e) {
-    return String((e as Error).message ?? e).slice(0, 160);
+    const inner = (e as { errors?: { message?: string }[] }).errors?.map((x) => x.message).join(" | ");
+    return String(inner || (e as Error).message || e).slice(0, 220);
   }
 }
 
@@ -69,7 +71,7 @@ const receiver = fc?.receiver_id ?? fc?.receiverId;
 check("R3", "an agent has one key, and it only reaches the colony", keys.keys.length === 1 && receiver === colony, JSON.stringify(fc?.method_names ?? fc?.methodNames ?? []));
 
 let err = await rejects(() => account(a).callFunction({ contractId: verifier, methodName: "mt_balance_of", args: { account_id: a, token_id: tokenId } } as never));
-check("R3", "an agent's key cannot call any other contract", !!err, err ?? "");
+check("R3", "an agent's key cannot call any other contract", /does not match|receiver/i.test(err ?? ""), (err ?? "").slice(0, 90));
 
 err = await rejects(() => account(a).callFunction({ contractId: colony, methodName: "add_founder", args: { label: "x", public_key: loadKey(a).public_key, genome: "x" }, gas: 100_000_000_000_000n } as never));
 check("R2", "an agent cannot add a founder", !!err);
@@ -357,12 +359,16 @@ if (await exists(asker)) {
   const keyA = saveKey(`${twinA}.${d}`, newKey());
   const keyB = saveKey(`${twinB}.${d}`, newKey());
   const s = await currentSalt(verifier);
-  const auth = (label: string, key: string) => ({ intent: "auth_call", contract_id: colony, msg: JSON.stringify({ spawn: { label, public_key: key, genome: genome(label) } }), min_gas: "130000000000000" });
-  await executeIntents(keeper, verifier, [signIntents(d, verifier, s, [auth(twinA, keyA.public_key), auth(twinB, keyB.public_key)])]).catch(() => null);
+  const auth = (label: string, key: string) => ({ intent: "auth_call", contract_id: colony, msg: JSON.stringify({ spawn: { label, public_key: key, genome: genome(label) } }), min_gas: "260000000000000" });
+  // Two transactions from two relayers, so both pass the first check while neither
+  // has finished. Only the second check, after the balance read, can stop the twin.
+  await Promise.all([
+    executeIntents(keeper, verifier, [signIntents(d, verifier, s, [auth(twinA, keyA.public_key)])]).catch(() => null),
+    executeIntents(colony, verifier, [signIntents(d, verifier, s, [auth(twinB, keyB.public_key)])]).catch(() => null),
+  ]);
   await c.sleep(9000);
-  const madeA = await exists(`${twinA}.${d}`);
-  const madeB = await exists(`${twinB}.${d}`);
-  check("R12", "two births requested at once cannot both pass the cooldown", Number(madeA) + Number(madeB) <= 1, `${Number(madeA) + Number(madeB)} born`);
+  const born = Number(await exists(`${twinA}.${d}`)) + Number(await exists(`${twinB}.${d}`));
+  check("R12", "two births requested at once cannot both pass the cooldown", born === 1, `${born} born`);
 }
 
 const passed = results.filter((r) => r.ok).length;

@@ -72,9 +72,12 @@ const dateFmt = new Intl.DateTimeFormat(LOCALE, { day: "numeric", month: "short"
 const stampFmt = new Intl.DateTimeFormat(LOCALE, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const clockFmt = new Intl.DateTimeFormat(LOCALE, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
-export const date = (ms: number) => dateFmt.format(ms);
-export const stamp = (ms: number) => stampFmt.format(ms);
-export const clock = (ms: number) => clockFmt.format(ms);
+/** Intl throws on an invalid time, and one bad field should not take a page down. */
+const when = (fmt: Intl.DateTimeFormat) => (ms: number) => (Number.isFinite(ms) ? fmt.format(ms) : "an unknown time");
+
+export const date = when(dateFmt);
+export const stamp = when(stampFmt);
+export const clock = when(clockFmt);
 
 export function span(ms: number): string {
   const s = Math.round(ms / 1000);

@@ -91,7 +91,7 @@ export async function view<T>(contractId: string, method: string, args: object =
   for (let attempt = 0; attempt < 12; attempt++) {
     const p = providers[attempt % providers.length];
     try {
-      return (await p.callFunction({ contractId, method, args } as never)) as T;
+      return (await p.callFunction({ contractId, method, args, finality: "optimistic" } as never)) as T;
     } catch (e) {
       last = e;
       const text = String((e as Error).message ?? e);

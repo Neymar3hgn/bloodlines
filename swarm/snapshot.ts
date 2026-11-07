@@ -71,6 +71,7 @@ const snapshot = {
     reputation: reputations[i],
     genome: registry[id]?.genome ?? null,
     label: id.split(".")[0],
+    death: a.status === "Dead" ? { balance: a.final_credits, heir: a.heir } : null,
   })),
   questions: questions.map((q, i) => ({ ...q, orders: orders[i], thoughts: thoughtsOn(q.id) })),
   e2e: read("data/e2e-report.json", null),

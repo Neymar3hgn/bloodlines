@@ -133,6 +133,9 @@ pub struct AgentRec {
     pub bills: U128,
     /// `settled_total` at the time of the agent's last child (R12).
     pub last_child_at: u64,
+    /// R14: what the agent left, and to whom.
+    pub final_credits: U128,
+    pub heir: Option<AccountId>,
 }
 
 #[near(serializers = [borsh, json])]
@@ -457,14 +460,16 @@ impl Colony {
             "agent is solvent and has no strikes"
         );
         let heir = self.nearest_living(&agent);
-        rec.status = Status::Dead;
-        rec.died_ms = env::block_timestamp_ms();
-        self.agents.insert(agent.clone(), rec);
-        self.alive -= 1;
         let (credit_heir, near_heir) = match heir {
             Some(h) => (h.clone(), h),
             None => (self.config.treasury.clone(), env::current_account_id()),
         };
+        rec.status = Status::Dead;
+        rec.died_ms = env::block_timestamp_ms();
+        rec.final_credits = U128(balance);
+        rec.heir = Some(credit_heir.clone());
+        self.agents.insert(agent.clone(), rec);
+        self.alive -= 1;
         event("death", json!({"agent": agent, "balance": U128(balance), "heir": credit_heir}));
         Promise::new(agent).function_call("die".to_string(), format!("{credit_heir}\n{near_heir}").into_bytes(), NO_DEPOSIT, GAS_DIE)
     }
@@ -898,6 +903,8 @@ impl Colony {
                 rewards: U128(0),
                 bills: U128(0),
                 last_child_at: self.settled_total,
+                final_credits: U128(0),
+                heir: None,
             },
         );
         self.alive += 1;

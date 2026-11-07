@@ -17,7 +17,7 @@ function roundLine(q: Question, now: number): string {
 }
 
 function Row({ item, now }: { item: FeedItem; now: number }) {
-  const when = <time dateTime={new Date(item.at).toISOString()}>{stamp(item.at)}</time>;
+  const when = <time dateTime={Number.isFinite(item.at) ? new Date(item.at).toISOString() : undefined}>{stamp(item.at)}</time>;
   if (item.kind === "round") {
     const q = item.question;
     return (

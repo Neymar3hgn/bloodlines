@@ -207,7 +207,7 @@ main,
   max-width: none;
 }
 
-.banner.is-fixture {
+.banner.is-warn {
   color: var(--accent);
 }
 

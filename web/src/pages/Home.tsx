@@ -22,7 +22,7 @@ function Counts() {
     { value: m.counts.generations, label: m.counts.generations === 1 ? "generation" : "generations" },
     { value: s ? s.settled : m.counts.answered, label: "questions answered" },
   ];
-  const behind = s ? s.agents - m.agents.size : 0;
+  const differs = s !== null && s.agents !== m.agents.size;
   return (
     <>
       <dl className="counts">
@@ -33,9 +33,9 @@ function Counts() {
           </div>
         ))}
       </dl>
-      {behind > 0 && (
+      {differs && (
         <p className="counts-note">
-          The counts are live. The tree is from the snapshot of {stamp(Date.parse(m.snapshot.generated))}, which has {m.agents.size} of {s?.agents} agents.
+          The counts are live, and the chain has {plural(s.agents, "agent")} now. The tree is from the snapshot of {stamp(Date.parse(m.snapshot.generated))}, which has {m.agents.size}.
         </p>
       )}
     </>
@@ -178,7 +178,7 @@ export function HomePage() {
               Plate I. The family tree of <Account id={m.snapshot.colony} />.
             </p>
             <p className="plate-note">
-              The colony is at the centre, and each ring out is one generation. Colour marks the founding lineage. {plural(m.agents.size, "agent")} recorded.
+              The colony is the root, and each step out is one generation. Colour marks the founding lineage. {plural(m.agents.size, "agent")} recorded.
             </p>
             <TreeKey />
           </figcaption>

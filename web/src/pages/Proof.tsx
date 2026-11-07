@@ -49,7 +49,7 @@ function CheckItYourself() {
             <span aria-hidden="true">{allGood ? "✓" : "✕"}</span> {passed.length} of {plural(checked.length, "question")} recomputed
           </p>
           <p className="small soft">
-            {m.snapshot.fixture
+            {import.meta.env.DEV && m.snapshot.fixture
               ? "Checked against the fixture, not the chain."
               : fromChain === checked.length
                 ? "Every order came straight from the chain."
@@ -70,8 +70,8 @@ function CheckItYourself() {
                   <span className="mono soft">{r.skipped ? "open" : r.price > 0 ? `${r.price}%` : "void"}</span>
                   {r.problems.length > 0 && (
                     <ul>
-                      {r.problems.map((p) => (
-                        <li key={p}>{p}</li>
+                      {r.problems.map((p, i) => (
+                        <li key={`${i}-${p}`}>{p}</li>
                       ))}
                     </ul>
                   )}
@@ -111,8 +111,8 @@ function RuleTests() {
                   <span className="mono">{rule}</span> {RULE_NAMES[rule] ?? ""}
                 </h3>
                 <ul>
-                  {results.map((r) => (
-                    <li key={r.claim} className={r.ok ? undefined : "is-bad"}>
+                  {results.map((r, i) => (
+                    <li key={`${i}-${r.claim}`} className={r.ok ? undefined : "is-bad"}>
                       <span className="tick" aria-label={r.ok ? "passed" : "failed"}>
                         {r.ok ? "✓" : "✕"}
                       </span>

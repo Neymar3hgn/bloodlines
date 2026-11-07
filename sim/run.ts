@@ -89,6 +89,7 @@ writeFileSync(
       colony: { buckets: runs[0].buckets, params: runs[0].params },
       control: { buckets: controls[0].buckets },
       summary: { selection: sel, control: ctl, improved, beatControl },
+      exams: { questions: exams[0].questions, founderError: mean(exams.map((e) => e.founderError)), evolvedError: mean(exams.map((e) => e.evolvedError)), wins: examWon, seeds },
       lies,
       habits,
       pumps,

@@ -38,7 +38,7 @@ let gone = 0;
 for (const [id] of rows) {
   try {
     await c.reap(id);
-    await c.sleep(2500);
+    await c.sleep(1500);
     if (!(await exists(id))) gone += 1;
   } catch (e) {
     console.log(`  could not reap ${id}: ${String((e as Error).message).slice(0, 90)}`);

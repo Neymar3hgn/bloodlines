@@ -15,8 +15,8 @@ function LiveBadge() {
   const m = useModel();
   const live = useLiveStats();
   const now = useNow(5_000);
-  if (m.snapshot.fixture) {
-    return <span className="live is-fixture">Fixture data</span>;
+  if (import.meta.env.DEV && m.snapshot.fixture) {
+    return <span className="live">Fixture data</span>;
   }
   const generated = Date.parse(m.snapshot.generated);
   if (live.stats && live.readAt) {
@@ -37,8 +37,8 @@ function LiveBadge() {
 
 function ModeBanner() {
   const m = useModel();
-  if (m.snapshot.fixture) {
-    return <p className="banner is-fixture">Fixture data from web/dev. This never ships. Nothing here happened on chain.</p>;
+  if (import.meta.env.DEV && m.snapshot.fixture) {
+    return <p className="banner is-warn">Fixture data from web/dev. This never ships. Nothing here happened on chain.</p>;
   }
   if (m.snapshot.mode === "ai") return null;
   return <p className="banner">These rounds used scripted agents, not AI. It is a test of the contracts.</p>;

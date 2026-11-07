@@ -84,7 +84,7 @@ export function useLive(snapshot: Snapshot | null): Live {
   const [live, setLive] = useState<Live>({ stats: null, readAt: null });
 
   useEffect(() => {
-    if (!snapshot || snapshot.fixture) return;
+    if (!snapshot || (import.meta.env.DEV && snapshot.fixture)) return;
     let stopped = false;
     const read = async () => {
       try {
