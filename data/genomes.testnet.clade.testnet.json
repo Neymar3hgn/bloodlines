@@ -1,0 +1,338 @@
+{
+ "ivy.clade.testnet": {
+  "id": "ivy.clade.testnet",
+  "genome": {
+   "name": "ivy",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "strategy": "Start from the base rate: how often do events of this exact kind happen? Only move away from that number for specific, concrete evidence.",
+   "temperature": 0.2,
+   "shrink": 1,
+   "size": 0.08,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "oak.clade.testnet": {
+  "id": "oak.clade.testnet",
+  "genome": {
+   "name": "oak",
+   "model": "Qwen/Qwen3.8-27B",
+   "strategy": "The status quo usually wins. Things change more slowly than people expect, and most deadlines pass with nothing happening.",
+   "temperature": 0.2,
+   "shrink": 1,
+   "size": 0.1,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "elm.clade.testnet": {
+  "id": "elm.clade.testnet",
+  "genome": {
+   "name": "elm",
+   "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+   "strategy": "Read the resolution rules like a lawyer. Work out exactly what must happen, by exactly when, and how many separate things must all go right.",
+   "temperature": 0.3,
+   "shrink": 1,
+   "size": 0.08,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "ash.clade.testnet": {
+  "id": "ash.clade.testnet",
+  "genome": {
+   "name": "ash",
+   "model": "levanto/sage-2",
+   "strategy": "Follow the incentives. Ask who wants this outcome, who can make it happen, and what it would cost them.",
+   "temperature": 0.4,
+   "shrink": 1,
+   "size": 0.07,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "fir.clade.testnet": {
+  "id": "fir.clade.testnet",
+  "genome": {
+   "name": "fir",
+   "model": "moonshotai/kimi-k2.6",
+   "strategy": "Think like a calibrated superforecaster. Split the question into parts, estimate each one, and combine them. Avoid certainty.",
+   "temperature": 0.3,
+   "shrink": 0.9,
+   "size": 0.09,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "yew.clade.testnet": {
+  "id": "yew.clade.testnet",
+  "genome": {
+   "name": "yew",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view.",
+   "temperature": 0.5,
+   "shrink": 1.3,
+   "size": 0.12,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "bay.clade.testnet": {
+  "id": "bay.clade.testnet",
+  "genome": {
+   "name": "bay",
+   "model": "Qwen/Qwen3.8-27B",
+   "strategy": "Find the closest historical parallels and count how they ended. Use that count as your estimate.",
+   "temperature": 0.4,
+   "shrink": 1,
+   "size": 0.08,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "fig.clade.testnet": {
+  "id": "fig.clade.testnet",
+  "genome": {
+   "name": "fig",
+   "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+   "strategy": "Assume the favourite wins. Reputation, resources and recent form predict results better than stories do.",
+   "temperature": 0.3,
+   "shrink": 1.1,
+   "size": 0.1,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "rue.clade.testnet": {
+  "id": "rue.clade.testnet",
+  "genome": {
+   "name": "rue",
+   "model": "levanto/sage-2",
+   "strategy": "Assume the obvious answer is priced into everyone's thinking. Look for why the popular view is wrong and lean against it.",
+   "temperature": 0.6,
+   "shrink": 0.9,
+   "size": 0.07,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "gum.clade.testnet": {
+  "id": "gum.clade.testnet",
+  "genome": {
+   "name": "gum",
+   "model": "moonshotai/kimi-k2.6",
+   "strategy": "Momentum carries. If the trend before the question date points one way, assume it continues.",
+   "temperature": 0.4,
+   "shrink": 1,
+   "size": 0.08,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "sal.clade.testnet": {
+  "id": "sal.clade.testnet",
+  "genome": {
+   "name": "sal",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "strategy": "Be humble. You rarely know enough, so stay close to 50 unless the evidence is overwhelming.",
+   "temperature": 0.2,
+   "shrink": 0.7,
+   "size": 0.05,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "tea.clade.testnet": {
+  "id": "tea.clade.testnet",
+  "genome": {
+   "name": "tea",
+   "model": "Qwen/Qwen3.8-27B",
+   "strategy": "Weigh the time left. Divide the remaining time by how long such things usually take, and scale your estimate by that.",
+   "temperature": 0.3,
+   "shrink": 1,
+   "size": 0.08,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "box.clade.testnet": {
+  "id": "box.clade.testnet",
+  "genome": {
+   "name": "box",
+   "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+   "strategy": "Think about what could go wrong. Name the most likely way the outcome fails, and estimate that first.",
+   "temperature": 0.4,
+   "shrink": 1,
+   "size": 0.07,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "nut.clade.testnet": {
+  "id": "nut.clade.testnet",
+  "genome": {
+   "name": "nut",
+   "model": "levanto/sage-2",
+   "strategy": "Think about who is reporting this and why the question was asked at all. Questions get written when something feels possible, which makes dramatic outcomes look likelier than they are.",
+   "temperature": 0.4,
+   "shrink": 1,
+   "size": 0.07,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "lin.clade.testnet": {
+  "id": "lin.clade.testnet",
+  "genome": {
+   "name": "lin",
+   "model": "moonshotai/kimi-k2.6",
+   "strategy": "Take two views: one as an optimist and one as a sceptic. Average them, then adjust for which view had the better evidence.",
+   "temperature": 0.5,
+   "shrink": 1,
+   "size": 0.08,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ },
+ "sol.clade.testnet": {
+  "id": "sol.clade.testnet",
+  "genome": {
+   "name": "sol",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "strategy": "Prefer simple rules of thumb over long reasoning. A short, plain estimate beats a clever story.",
+   "temperature": 0.3,
+   "shrink": 1,
+   "size": 0.09,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 1
+   }
+  },
+  "parent": null
+ }
+}

@@ -1,6 +1,6 @@
 /** Everything the swarm does on chain, as plain functions over the deployed colony. */
 import { createHash, randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { lockFor } from "../engine/market.ts";
 import { account, hasKey, loadKey, NETWORK, newKey, saveKey, view } from "./chain.ts";
 import { creditBalance, currentSalt, executeIntents, signIntents, transferIntent, type MultiPayload } from "./intents.ts";
@@ -52,6 +52,59 @@ export const sealOutcome = (yes: boolean) => {
   return { salt, yes, hash: sha256Hex(`${yes ? "yes" : "no"}:${salt}`) };
 };
 
+/** Seals are kept on disk, so a crashed run can still open its answers. */
+const SEALS = `.keys/seals.${colony}.json`;
+const loadSeals = (): Record<string, { yes: boolean; salt: string }> => (existsSync(SEALS) ? JSON.parse(readFileSync(SEALS, "utf8")) : {});
+export function rememberSeal(hash: string, yes: boolean, salt: string) {
+  mkdirSync(".keys", { recursive: true });
+  const all = loadSeals();
+  all[hash] = { yes, salt };
+  writeFileSync(SEALS, JSON.stringify(all));
+}
+
+/**
+ * Moves any unfinished question forward from what the chain says, so a crash
+ * costs nothing. A sealed question whose seal is gone is voided, which refunds
+ * everyone in full.
+ */
+export async function finishOpenWork(log: (s: string) => void = console.log) {
+  const seals = loadSeals();
+  const stats = await getStats();
+  const touched = new Set<string>();
+  for (let id = Math.max(0, stats.questions - 40); id < stats.questions; id++) {
+    let q = await getQuestion(id);
+    if (q.status === "Settled" || q.status === "Void") continue;
+    if (q.status === "Open") {
+      if (Date.now() < q.reveal_end_ms + 1500) continue;
+      await clear(id);
+      q = await getQuestion(id);
+      log(`  recovered question ${id}: cleared at ${q.price}`);
+      if (q.status === "Void") continue;
+    }
+    if (q.status === "Cleared") {
+      const seal = q.resolver?.Sealed ? seals[q.resolver.Sealed.hash] : undefined;
+      if (seal) await resolveSealed(id, seal.yes, seal.salt);
+      else if (q.resolver?.Sealed) await call(keeper, colony, "void_question", { q: id, evidence: "seal lost in a crashed run" }, 30n);
+      else continue;
+      q = await getQuestion(id);
+    }
+    if (q.status === "Resolved") {
+      while (q.status === "Resolved") {
+        await settle(id);
+        q = await getQuestion(id);
+      }
+      log(`  recovered question ${id}: settled`);
+      for (const o of await getOrders(id)) touched.add(o.agent);
+      touched.add(q.opener);
+    }
+  }
+  if (touched.size) {
+    touched.add(deployment.treasury);
+    const list = [...touched];
+    for (let i = 0; i < list.length; i += 12) await sweep(list.slice(i, i + 12));
+  }
+}
+
 export async function addFounder(label: string, genome: string) {
   const id = `${label}.${colony}`;
   const key = hasKey(id) ? loadKey(id) : saveKey(id, newKey());
@@ -66,6 +119,7 @@ export async function grant(recipients: string[], amount: bigint) {
   return executeIntents(keeper, verifier, [payload]);
 }
 
+/** The keeper's chain-side check that a call really landed. */
 export async function openQuestion(q: QuestionInput): Promise<number> {
   const before = await view<{ questions: number }>(colony, "get_stats");
   const msg = JSON.stringify({
@@ -132,6 +186,8 @@ export const getQuestion = (q: number) => view<any>(colony, "get_question", { q 
 export const getOrders = (q: number) => view<any[]>(colony, "get_orders", { q });
 export const getAgent = (id: string) => view<any>(colony, "get_agent", { id });
 export const getStats = () => view<any>(colony, "get_stats");
+export const getAgents = (from = 0, limit = 200) => view<[string, any][]>(colony, "get_agents", { from, limit });
+export const getQuestions = (from = 0, limit = 100) => view<any[]>(colony, "get_questions", { from, limit });
 export const getClaimable = (id: string) => view<string>(colony, "get_claimable", { id });
 export const getReputation = (id: string) => view<number>(colony, "get_reputation", { id });
 export const getLineage = (id: string) => view<string[]>(colony, "get_lineage", { id });

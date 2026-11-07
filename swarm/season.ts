@@ -7,7 +7,7 @@
  */
 import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { exists, hasKey, loadKey, view } from "./chain.ts";
+import { exists, inPool, view } from "./chain.ts";
 import * as c from "./colony.ts";
 import { childLabel, engages, gaussian, mutateNumbers, toOrder, type Genome, type Rng } from "./genome.ts";
 import { founders, MODELS } from "./founders.ts";
@@ -72,21 +72,23 @@ async function ensureFounders() {
   }
 }
 
-async function living(): Promise<Rec[]> {
-  const out: Rec[] = [];
-  for (const r of Object.values(registry)) {
-    const a = await c.getAgent(r.id);
-    if (a?.status === "Alive") out.push(r);
+/** One read for the whole colony, instead of one per agent. */
+async function living(): Promise<(Rec & { chain: any })[]> {
+  const out: (Rec & { chain: any })[] = [];
+  for (const [id, a] of await c.getAgents()) {
+    if (a.status === "Alive" && registry[id]) out.push({ ...registry[id], chain: a });
   }
   return out;
 }
 
-async function fundEmpty(agents: Rec[]) {
-  const empty: string[] = [];
-  for (const r of agents) {
-    const a = await c.getAgent(r.id);
-    if (a.questions === 0 && a.parent === colony && (await c.creditsOf(r.id)) === 0n) empty.push(r.id);
-  }
+const balances = async (ids: string[]) => {
+  const values = await inPool(ids, 3, (id) => c.creditsOf(id));
+  return new Map(ids.map((id, i) => [id, values[i]]));
+};
+
+async function fundEmpty(agents: (Rec & { chain: any })[]) {
+  const held = await balances(agents.map((r) => r.id));
+  const empty = agents.filter((r) => r.chain.parent === colony && held.get(r.id) === 0n).map((r) => r.id);
   if (empty.length) {
     await c.grant(empty, capital);
     console.log(`  granted capital to ${empty.length} agents`);
@@ -96,16 +98,17 @@ async function fundEmpty(agents: Rec[]) {
 
 async function runQuestion(q: (typeof questions)[number], cfg: { max_stake: number }) {
   const agents = await living();
+  const held = await balances(agents.map((r) => r.id));
   const seal = c.sealOutcome(q.yes);
+  c.rememberSeal(seal.hash, seal.yes, seal.salt);
 
   // Agents think first. Nothing about their answers exists on chain yet.
   const plans: c.OrderPlan[] = [];
   const notes: Record<string, string> = {};
-  await Promise.all(
-    agents.map(async (r) => {
+  await inPool(agents, 6, async (r) => {
       const g = r.genome;
       if (!engages(g, r.id, q.id, q.category)) return;
-      const credits = await c.creditsOf(r.id);
+      const credits = held.get(r.id) ?? 0n;
       let probability: number;
       let bill = billScripted;
       let receipt = c.sha256Hex(`${r.id}:${q.id}:scripted`);
@@ -122,8 +125,7 @@ async function runQuestion(q: (typeof questions)[number], cfg: { max_stake: numb
       const order = toOrder(g, probability, credits, BigInt(cfg.max_stake), reserve);
       if (!order) return;
       plans.push({ agent: r.id, belief: order.belief, stake: order.stake, bill, receipt, salt: randomBytes(8).toString("hex") });
-    }),
-  );
+  });
   if (plans.length < 2) {
     console.log("  fewer than two agents engaged, skipping");
     return;
@@ -140,8 +142,8 @@ async function runQuestion(q: (typeof questions)[number], cfg: { max_stake: numb
   });
   console.log(`Q${id} [${q.category}] ${q.text.slice(0, 70)}`);
 
-  const committed = await Promise.allSettled(plans.map((p) => c.commit(id, p)));
-  const live = plans.filter((_, i) => committed[i].status === "fulfilled");
+  const committed = await inPool(plans, 4, (p) => c.commit(id, p).then(() => true, () => false));
+  const live = plans.filter((_, i) => committed[i]);
   await c.waitForRevealWindow(id);
 
   for (let i = 0; i < live.length; i += batchSize) {
@@ -166,23 +168,23 @@ async function runQuestion(q: (typeof questions)[number], cfg: { max_stake: numb
 
 async function selection(cfg: any) {
   const agents = await living();
+  const held = await balances(agents.map((r) => r.id));
   let alive = agents.length;
   for (const r of agents) {
-    const credits = await c.creditsOf(r.id);
-    const rec = await c.getAgent(r.id);
-    if (credits < BigInt(cfg.floor) && rec.open === 0) {
+    const credits = held.get(r.id) ?? 0n;
+    if (credits < BigInt(cfg.floor) && r.chain.open === 0) {
       await c.reap(r.id);
       await c.sleep(5000);
       alive -= 1;
       console.log(`  DEATH ${r.id} with ${credits} units left`);
     }
   }
+  const stats = await c.getStats();
   for (const r of await living()) {
     if (alive >= cfg.max_alive) break;
-    const credits = await c.creditsOf(r.id);
+    const credits = held.get(r.id) ?? 0n;
     if (credits < BigInt(cfg.spawn_threshold)) continue;
-    const rec = await c.getAgent(r.id);
-    const stats = await c.getStats();
+    const rec = r.chain;
     if (rec.children > 0 && stats.settled < rec.last_child_at + cfg.spawn_cooldown) continue;
     const taken = new Set(Object.values(registry).filter((x) => x.parent === r.id).map((x) => x.id.split(".")[0]));
     const label = childLabel(rng, taken);
@@ -205,6 +207,7 @@ async function selection(cfg: any) {
 console.log(`Season on ${colony} (${c.deployment.network}), ${useAi ? "real AI" : "scripted agents"}`);
 const cfg = await view<any>(colony, "get_config");
 await ensureFounders();
+await c.finishOpenWork();
 await fundEmpty(await living());
 
 const offset = Number(arg("offset", "0"));
@@ -213,5 +216,3 @@ for (const q of questions.slice(offset, offset + count)) {
   await selection(cfg);
 }
 console.log("Stats:", await c.getStats());
-void hasKey;
-void loadKey;
