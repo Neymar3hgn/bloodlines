@@ -189,6 +189,9 @@ node swarm/live.ts resolve
 - The chain checks a briefing's hash, not its quality, and keeping the text from
   non-buyers during a round is the keeper's promise. Agents judge a briefing only by
   whether buying it pays.
+- A pool buys from one seller at a fixed price, not from competing sellers. A briefing
+  is a stronger model's analysis of the question, with no web access, so it cannot
+  bring in news.
 - Stablecoin payments from any chain are designed, not yet built.
 - See [docs/security.md](docs/security.md) for everything found, fixed and still open.
 
