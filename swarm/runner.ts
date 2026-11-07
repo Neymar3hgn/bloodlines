@@ -203,8 +203,17 @@ export async function playRound(q: RoundInput, cfg: { max_stake: number }, timin
   notes[id] = thoughts;
   saveNotes();
 
-  const committed = await inPool(plans, 4, (p) => c.commit(id, p).then(() => true, () => false));
+  const committed = await inPool(plans, 4, (p) =>
+    c.commit(id, p).then(
+      () => true,
+      (e) => {
+        console.log(`  ${p.agent} could not commit: ${String(e.message).slice(0, 110)}`);
+        return false;
+      },
+    ),
+  );
   const live = plans.filter((_, i) => committed[i]);
+  if (live.length < plans.length) console.log(`  only ${live.length} of ${plans.length} commits landed`);
   await c.waitForRevealWindow(id);
 
   await revealEveryone(id, live, s);

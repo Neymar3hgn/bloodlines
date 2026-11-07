@@ -130,7 +130,7 @@ if (process.argv[1]?.endsWith("market-worker.ts")) {
   const cfg = await runner.colonyConfig();
 
   const ask: Asker = async (q) => {
-    const id = await runner.playRound({ ...q, asOf: new Date().toISOString().slice(0, 10) }, cfg, { commitSecs: 16, revealSecs: 60 }, settings);
+    const id = await runner.playRound({ ...q, asOf: new Date().toISOString().slice(0, 10) }, cfg, { commitSecs: 45, revealSecs: 120 }, settings);
     if (id === null) return null;
     const row = await c.getQuestion(id);
     const orders = await c.getOrders(id);
