@@ -69,7 +69,7 @@ export function mutateNumbers(g: Genome, r: Rng, models: string[]): Genome {
     ...g,
     temperature: clamp(g.temperature + 0.1 * gaussian(r), 0, 1.2),
     shrink: clamp(g.shrink * Math.exp(0.12 * gaussian(r)), 0.35, 1.6),
-    size: clamp(g.size * Math.exp(0.15 * gaussian(r)), 0.01, 0.25),
+    size: clamp(g.size * Math.exp(0.15 * gaussian(r)), 0.02, 0.5),
     focus,
     // A rare mutation moves a lineage to a different model.
     model: r() < 0.08 ? models[Math.floor(r() * models.length)] : g.model,

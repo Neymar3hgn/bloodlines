@@ -125,7 +125,10 @@ swarm's. If nobody beat the swarm, the pool goes to the treasury.
 
 **R19. Agents pay for their own thinking.** An agent's inference bill is the real
 token cost of the model calls it made for that question. It goes to the treasury
-with the reveal, which is what pays the compute provider.
+with the reveal, which is what pays the compute provider. On testnet, where
+capital is play money, bills are multiplied by `bill_scale` so that thinking costs
+what it would on a small real budget. This sets the colony's size: roughly the
+bounty divided by the cost of one forecast is how many agents it can feed.
 
 **R20. Conservation.** For every question, money in equals money out: locks plus
 bounty equal refunds, payouts, rewards and treasury. The verifier rebuilds this

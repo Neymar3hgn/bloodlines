@@ -1,0 +1,997 @@
+{
+ "run": "scripted",
+ "mode": "scripted",
+ "seed": 7,
+ "rules": {
+  "capital": "1000000",
+  "bounty": "80000",
+  "treasuryBps": "500",
+  "floor": "350000",
+  "spawnThreshold": "1500000",
+  "endowmentBps": "5000",
+  "spawnCooldown": "6",
+  "maxAlive": "32",
+  "maxStake": "60",
+  "reserve": "40000",
+  "billScale": "8"
+ },
+ "questions": {
+  "season": 221,
+  "exam": 120,
+  "from": "data/questions.json"
+ },
+ "usage": {
+  "spentUsd": 0.1920000000000014,
+  "modelCalls": 0,
+  "cachedAnswers": 480,
+  "verifiedReceipts": 0
+ },
+ "season": {
+  "alive": 21,
+  "total": 40,
+  "births": 24,
+  "deaths": 19,
+  "maxGeneration": 5,
+  "history": [
+   {
+    "at": 20,
+    "alive": 17,
+    "maxGen": 1,
+    "wealth": 16.495932,
+    "meanShrink": 1.0148211396640372,
+    "share": {
+     "deepseek-ai/DeepSeek-V4.1-Flash-1017": 0.2584783327186363,
+     "Qwen/Qwen3.8-27B": 0.1885531535896244,
+     "Qwen/Qwen3.6-35B-A3B-FP8": 0.18831170012097528,
+     "levanto/sage-2": 0.1523538651832464,
+     "moonshotai/kimi-k2.6": 0.2123029483875176
+    }
+   },
+   {
+    "at": 40,
+    "alive": 21,
+    "maxGen": 1,
+    "wealth": 16.793442,
+    "meanShrink": 1.0206071781147876,
+    "share": {
+     "deepseek-ai/DeepSeek-V4.1-Flash-1017": 0.24458869122839735,
+     "Qwen/Qwen3.8-27B": 0.165267727723715,
+     "Qwen/Qwen3.6-35B-A3B-FP8": 0.2281901470824147,
+     "levanto/sage-2": 0.13459956571142473,
+     "moonshotai/kimi-k2.6": 0.2273538682540482
+    }
+   },
+   {
+    "at": 60,
+    "alive": 23,
+    "maxGen": 2,
+    "wealth": 16.599062,
+    "meanShrink": 1.0532355477417081,
+    "share": {
+     "deepseek-ai/DeepSeek-V4.1-Flash-1017": 0.32528681439951246,
+     "Qwen/Qwen3.8-27B": 0.19385185741218391,
+     "Qwen/Qwen3.6-35B-A3B-FP8": 0.1794409828699959,
+     "levanto/sage-2": 0.13195125122130397,
+     "moonshotai/kimi-k2.6": 0.1694690940970038
+    }
+   },
+   {
+    "at": 80,
+    "alive": 23,
+    "maxGen": 2,
+    "wealth": 16.447981,
+    "meanShrink": 1.0983446091204552,
+    "share": {
+     "Qwen/Qwen3.8-27B": 0.16135007694865405,
+     "Qwen/Qwen3.6-35B-A3B-FP8": 0.16751204904723566,
+     "levanto/sage-2": 0.13445698897633698,
+     "moonshotai/kimi-k2.6": 0.18030091352853583,
+     "deepseek-ai/DeepSeek-V4.1-Flash-1017": 0.3563799714992375
+    }
+   },
+   {
+    "at": 100,
+    "alive": 21,
+    "maxGen": 4,
+    "wealth": 15.235502,
+    "meanShrink": 1.1692024780784365,
+    "share": {
+     "Qwen/Qwen3.8-27B": 0.13741109416676917,
+     "Qwen/Qwen3.6-35B-A3B-FP8": 0.14494382922203677,
+     "levanto/sage-2": 0.13995948410495435,
+     "moonshotai/kimi-k2.6": 0.16267609692151924,
+     "deepseek-ai/DeepSeek-V4.1-Flash-1017": 0.41500949558472044
+    }
+   },
+   {
+    "at": 120,
+    "alive": 22,
+    "maxGen": 4,
+    "wealth": 15.542623,
+    "meanShrink": 1.209283014594494,
+    "share": {
+     "Qwen/Qwen3.8-27B": 0.126012900139185,
+     "Qwen/Qwen3.6-35B-A3B-FP8": 0.1304072034688096,
+     "levanto/sage-2": 0.15381683001640073,
+     "moonshotai/kimi-k2.6": 0.15788223133251061,
+     "deepseek-ai/DeepSeek-V4.1-Flash-1017": 0.4318808350430941
+    }
+   },
+   {
+    "at": 140,
+    "alive": 19,
+    "maxGen": 5,
+    "wealth": 14.525044,
+    "meanShrink": 1.2669543605627487,
+    "share": {
+     "Qwen/Qwen3.6-35B-A3B-FP8": 0.1139875376625365,
+     "levanto/sage-2": 0.1731435030420562,
+     "moonshotai/kimi-k2.6": 0.154370616708631,
+     "Qwen/Qwen3.8-27B": 0.08834203875733526,
+     "deepseek-ai/DeepSeek-V4.1-Flash-1017": 0.4701563038294412
+    }
+   },
+   {
+    "at": 160,
+    "alive": 18,
+    "maxGen": 5,
+    "wealth": 14.619044,
+    "meanShrink": 1.3275007725873704,
+    "share": {
+     "Qwen/Qwen3.6-35B-A3B-FP8": 0.0783730454604282,
+     "levanto/sage-2": 0.14735122214557944,
+     "moonshotai/kimi-k2.6": 0.14210238371264222,
+     "Qwen/Qwen3.8-27B": 0.05831817730352272,
+     "deepseek-ai/DeepSeek-V4.1-Flash-1017": 0.5738551713778275
+    }
+   },
+   {
+    "at": 180,
+    "alive": 20,
+    "maxGen": 5,
+    "wealth": 14.809019,
+    "meanShrink": 1.3597936510062276,
+    "share": {
+     "Qwen/Qwen3.6-35B-A3B-FP8": 0.06546321535545332,
+     "levanto/sage-2": 0.16910850070487451,
+     "moonshotai/kimi-k2.6": 0.09688575590321005,
+     "Qwen/Qwen3.8-27B": 0.041547991801482595,
+     "deepseek-ai/DeepSeek-V4.1-Flash-1017": 0.6269945362349796
+    }
+   },
+   {
+    "at": 200,
+    "alive": 23,
+    "maxGen": 5,
+    "wealth": 15.231343,
+    "meanShrink": 1.3511057687373051,
+    "share": {
+     "Qwen/Qwen3.6-35B-A3B-FP8": 0.06347851269582729,
+     "levanto/sage-2": 0.17223937508333964,
+     "moonshotai/kimi-k2.6": 0.09317096988755358,
+     "Qwen/Qwen3.8-27B": 0.026519263600064683,
+     "deepseek-ai/DeepSeek-V4.1-Flash-1017": 0.6445918787332148
+    }
+   },
+   {
+    "at": 220,
+    "alive": 21,
+    "maxGen": 5,
+    "wealth": 14.915709,
+    "meanShrink": 1.3894764592741373,
+    "share": {
+     "Qwen/Qwen3.6-35B-A3B-FP8": 0.07954566557982594,
+     "levanto/sage-2": 0.15167860944457956,
+     "Qwen/Qwen3.8-27B": 0.03412093920577292,
+     "deepseek-ai/DeepSeek-V4.1-Flash-1017": 0.6966230703481812,
+     "moonshotai/kimi-k2.6": 0.03803171542164037
+    }
+   }
+  ],
+  "birthsList": [
+   {
+    "at": 19,
+    "id": "ba.yew",
+    "parent": "yew",
+    "gen": 1,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised)"
+   },
+   {
+    "at": 20,
+    "id": "da.fir",
+    "parent": "fir",
+    "gen": 1,
+    "strategy": "Think like a calibrated superforecaster. Split the question into parts, estimate each one, and combine them. Avoid certainty. (revised)"
+   },
+   {
+    "at": 26,
+    "id": "lu.gum",
+    "parent": "gum",
+    "gen": 1,
+    "strategy": "Momentum carries. If the trend before the question date points one way, assume it continues. (revised)"
+   },
+   {
+    "at": 28,
+    "id": "wu.fig",
+    "parent": "fig",
+    "gen": 1,
+    "strategy": "Assume the favourite wins. Reputation, resources and recent form predict results better than stories do. (revised)"
+   },
+   {
+    "at": 32,
+    "id": "ba.sol",
+    "parent": "sol",
+    "gen": 1,
+    "strategy": "Prefer simple rules of thumb over long reasoning. A short, plain estimate beats a clever story. (revised)"
+   },
+   {
+    "at": 40,
+    "id": "tu.box",
+    "parent": "box",
+    "gen": 1,
+    "strategy": "Think about what could go wrong. Name the most likely way the outcome fails, and estimate that first. (revised)"
+   },
+   {
+    "at": 43,
+    "id": "ba.tea",
+    "parent": "tea",
+    "gen": 1,
+    "strategy": "Weigh the time left. Divide the remaining time by how long such things usually take, and scale your estimate by that. (revised)"
+   },
+   {
+    "at": 51,
+    "id": "tu.nut",
+    "parent": "nut",
+    "gen": 1,
+    "strategy": "Think about who is reporting this and why the question was asked at all. Questions get written when something feels possible, which makes dramatic outcomes look likelier than they are. (revised)"
+   },
+   {
+    "at": 58,
+    "id": "ru.ba.yew",
+    "parent": "ba.yew",
+    "gen": 2,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised)"
+   },
+   {
+    "at": 77,
+    "id": "gu.ba.yew",
+    "parent": "ba.yew",
+    "gen": 2,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised)"
+   },
+   {
+    "at": 87,
+    "id": "hi.gu.ba.yew",
+    "parent": "gu.ba.yew",
+    "gen": 3,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised)"
+   },
+   {
+    "at": 94,
+    "id": "ne.hi.gu.ba.yew",
+    "parent": "hi.gu.ba.yew",
+    "gen": 4,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised) (revised)"
+   },
+   {
+    "at": 112,
+    "id": "ba.gum",
+    "parent": "gum",
+    "gen": 1,
+    "strategy": "Momentum carries. If the trend before the question date points one way, assume it continues. (revised)"
+   },
+   {
+    "at": 112,
+    "id": "va.ru.ba.yew",
+    "parent": "ru.ba.yew",
+    "gen": 3,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised)"
+   },
+   {
+    "at": 121,
+    "id": "tu.ne.hi.gu.ba.yew",
+    "parent": "ne.hi.gu.ba.yew",
+    "gen": 5,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised) (revised) (revised)"
+   },
+   {
+    "at": 134,
+    "id": "ku.gu.ba.yew",
+    "parent": "gu.ba.yew",
+    "gen": 3,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised)"
+   },
+   {
+    "at": 143,
+    "id": "mu.hi.gu.ba.yew",
+    "parent": "hi.gu.ba.yew",
+    "gen": 4,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised) (revised)"
+   },
+   {
+    "at": 162,
+    "id": "lo.hi.gu.ba.yew",
+    "parent": "hi.gu.ba.yew",
+    "gen": 4,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised) (revised)"
+   },
+   {
+    "at": 174,
+    "id": "bo.gu.ba.yew",
+    "parent": "gu.ba.yew",
+    "gen": 3,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised)"
+   },
+   {
+    "at": 174,
+    "id": "ne.ne.hi.gu.ba.yew",
+    "parent": "ne.hi.gu.ba.yew",
+    "gen": 5,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised) (revised) (revised)"
+   },
+   {
+    "at": 191,
+    "id": "su.gu.ba.yew",
+    "parent": "gu.ba.yew",
+    "gen": 3,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised)"
+   },
+   {
+    "at": 199,
+    "id": "ju.hi.gu.ba.yew",
+    "parent": "hi.gu.ba.yew",
+    "gen": 4,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised) (revised)"
+   },
+   {
+    "at": 199,
+    "id": "ba.nut",
+    "parent": "nut",
+    "gen": 1,
+    "strategy": "Think about who is reporting this and why the question was asked at all. Questions get written when something feels possible, which makes dramatic outcomes look likelier than they are. (revised)"
+   },
+   {
+    "at": 217,
+    "id": "se.ne.hi.gu.ba.yew",
+    "parent": "ne.hi.gu.ba.yew",
+    "gen": 5,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised) (revised) (revised)"
+   }
+  ],
+  "deathsList": [
+   {
+    "at": 47,
+    "id": "lu.gum",
+    "gen": 1
+   },
+   {
+    "at": 52,
+    "id": "rue",
+    "gen": 0
+   },
+   {
+    "at": 60,
+    "id": "ivy",
+    "gen": 0
+   },
+   {
+    "at": 89,
+    "id": "bay",
+    "gen": 0
+   },
+   {
+    "at": 94,
+    "id": "fig",
+    "gen": 0
+   },
+   {
+    "at": 95,
+    "id": "lin",
+    "gen": 0
+   },
+   {
+    "at": 98,
+    "id": "sal",
+    "gen": 0
+   },
+   {
+    "at": 103,
+    "id": "tu.box",
+    "gen": 1
+   },
+   {
+    "at": 120,
+    "id": "sol",
+    "gen": 0
+   },
+   {
+    "at": 124,
+    "id": "yew",
+    "gen": 0
+   },
+   {
+    "at": 125,
+    "id": "ba.sol",
+    "gen": 1
+   },
+   {
+    "at": 130,
+    "id": "oak",
+    "gen": 0
+   },
+   {
+    "at": 134,
+    "id": "ba.tea",
+    "gen": 1
+   },
+   {
+    "at": 144,
+    "id": "da.fir",
+    "gen": 1
+   },
+   {
+    "at": 156,
+    "id": "wu.fig",
+    "gen": 1
+   },
+   {
+    "at": 163,
+    "id": "box",
+    "gen": 0
+   },
+   {
+    "at": 206,
+    "id": "ku.gu.ba.yew",
+    "gen": 3
+   },
+   {
+    "at": 209,
+    "id": "fir",
+    "gen": 0
+   },
+   {
+    "at": 209,
+    "id": "gum",
+    "gen": 0
+   }
+  ],
+  "tree": [
+   {
+    "id": "ivy",
+    "parent": null,
+    "founder": "ivy",
+    "gen": 0,
+    "born": 0,
+    "died": 60,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 0,
+    "shrink": 1,
+    "strategy": "Start from the base rate: how often do events of this exact kind happen? Only move away from that number for specific, concrete evidence."
+   },
+   {
+    "id": "oak",
+    "parent": null,
+    "founder": "oak",
+    "gen": 0,
+    "born": 0,
+    "died": 130,
+    "model": "Qwen/Qwen3.8-27B",
+    "credits": 0,
+    "shrink": 1,
+    "strategy": "The status quo usually wins. Things change more slowly than people expect, and most deadlines pass with nothing happening."
+   },
+   {
+    "id": "elm",
+    "parent": null,
+    "founder": "elm",
+    "gen": 0,
+    "born": 0,
+    "died": null,
+    "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+    "credits": 1.14808,
+    "shrink": 1,
+    "strategy": "Read the resolution rules like a lawyer. Work out exactly what must happen, by exactly when, and how many separate things must all go right."
+   },
+   {
+    "id": "ash",
+    "parent": null,
+    "founder": "ash",
+    "gen": 0,
+    "born": 0,
+    "died": null,
+    "model": "levanto/sage-2",
+    "credits": 0.417931,
+    "shrink": 1,
+    "strategy": "Follow the incentives. Ask who wants this outcome, who can make it happen, and what it would cost them."
+   },
+   {
+    "id": "fir",
+    "parent": null,
+    "founder": "fir",
+    "gen": 0,
+    "born": 0,
+    "died": 209,
+    "model": "moonshotai/kimi-k2.6",
+    "credits": 0,
+    "shrink": 0.9,
+    "strategy": "Think like a calibrated superforecaster. Split the question into parts, estimate each one, and combine them. Avoid certainty."
+   },
+   {
+    "id": "yew",
+    "parent": null,
+    "founder": "yew",
+    "gen": 0,
+    "born": 0,
+    "died": 124,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 0,
+    "shrink": 1.3,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view."
+   },
+   {
+    "id": "bay",
+    "parent": null,
+    "founder": "bay",
+    "gen": 0,
+    "born": 0,
+    "died": 89,
+    "model": "Qwen/Qwen3.8-27B",
+    "credits": 0,
+    "shrink": 1,
+    "strategy": "Find the closest historical parallels and count how they ended. Use that count as your estimate."
+   },
+   {
+    "id": "fig",
+    "parent": null,
+    "founder": "fig",
+    "gen": 0,
+    "born": 0,
+    "died": 94,
+    "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+    "credits": 0,
+    "shrink": 1.1,
+    "strategy": "Assume the favourite wins. Reputation, resources and recent form predict results better than stories do."
+   },
+   {
+    "id": "rue",
+    "parent": null,
+    "founder": "rue",
+    "gen": 0,
+    "born": 0,
+    "died": 52,
+    "model": "levanto/sage-2",
+    "credits": 0,
+    "shrink": 0.9,
+    "strategy": "Assume the obvious answer is priced into everyone's thinking. Look for why the popular view is wrong and lean against it."
+   },
+   {
+    "id": "gum",
+    "parent": null,
+    "founder": "gum",
+    "gen": 0,
+    "born": 0,
+    "died": 209,
+    "model": "moonshotai/kimi-k2.6",
+    "credits": 0,
+    "shrink": 1,
+    "strategy": "Momentum carries. If the trend before the question date points one way, assume it continues."
+   },
+   {
+    "id": "sal",
+    "parent": null,
+    "founder": "sal",
+    "gen": 0,
+    "born": 0,
+    "died": 98,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 0,
+    "shrink": 0.7,
+    "strategy": "Be humble. You rarely know enough, so stay close to 50 unless the evidence is overwhelming."
+   },
+   {
+    "id": "tea",
+    "parent": null,
+    "founder": "tea",
+    "gen": 0,
+    "born": 0,
+    "died": null,
+    "model": "Qwen/Qwen3.8-27B",
+    "credits": 0.491338,
+    "shrink": 1,
+    "strategy": "Weigh the time left. Divide the remaining time by how long such things usually take, and scale your estimate by that."
+   },
+   {
+    "id": "box",
+    "parent": null,
+    "founder": "box",
+    "gen": 0,
+    "born": 0,
+    "died": 163,
+    "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+    "credits": 0,
+    "shrink": 1,
+    "strategy": "Think about what could go wrong. Name the most likely way the outcome fails, and estimate that first."
+   },
+   {
+    "id": "nut",
+    "parent": null,
+    "founder": "nut",
+    "gen": 0,
+    "born": 0,
+    "died": null,
+    "model": "levanto/sage-2",
+    "credits": 0.756998,
+    "shrink": 1,
+    "strategy": "Think about who is reporting this and why the question was asked at all. Questions get written when something feels possible, which makes dramatic outcomes look likelier than they are."
+   },
+   {
+    "id": "lin",
+    "parent": null,
+    "founder": "lin",
+    "gen": 0,
+    "born": 0,
+    "died": 95,
+    "model": "moonshotai/kimi-k2.6",
+    "credits": 0,
+    "shrink": 1,
+    "strategy": "Take two views: one as an optimist and one as a sceptic. Average them, then adjust for which view had the better evidence."
+   },
+   {
+    "id": "sol",
+    "parent": null,
+    "founder": "sol",
+    "gen": 0,
+    "born": 0,
+    "died": 120,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 0,
+    "shrink": 1,
+    "strategy": "Prefer simple rules of thumb over long reasoning. A short, plain estimate beats a clever story."
+   },
+   {
+    "id": "ba.yew",
+    "parent": "yew",
+    "founder": "yew",
+    "gen": 1,
+    "born": 19,
+    "died": null,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 0.721981,
+    "shrink": 1.4362080296803768,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised)"
+   },
+   {
+    "id": "da.fir",
+    "parent": "fir",
+    "founder": "fir",
+    "gen": 1,
+    "born": 20,
+    "died": 144,
+    "model": "moonshotai/kimi-k2.6",
+    "credits": 0,
+    "shrink": 0.9187412042013513,
+    "strategy": "Think like a calibrated superforecaster. Split the question into parts, estimate each one, and combine them. Avoid certainty. (revised)"
+   },
+   {
+    "id": "lu.gum",
+    "parent": "gum",
+    "founder": "gum",
+    "gen": 1,
+    "born": 26,
+    "died": 47,
+    "model": "moonshotai/kimi-k2.6",
+    "credits": 0,
+    "shrink": 1.1657921174223573,
+    "strategy": "Momentum carries. If the trend before the question date points one way, assume it continues. (revised)"
+   },
+   {
+    "id": "wu.fig",
+    "parent": "fig",
+    "founder": "fig",
+    "gen": 1,
+    "born": 28,
+    "died": 156,
+    "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+    "credits": 0,
+    "shrink": 1.0864818260438762,
+    "strategy": "Assume the favourite wins. Reputation, resources and recent form predict results better than stories do. (revised)"
+   },
+   {
+    "id": "ba.sol",
+    "parent": "sol",
+    "founder": "sol",
+    "gen": 1,
+    "born": 32,
+    "died": 125,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 0,
+    "shrink": 0.8778444268002842,
+    "strategy": "Prefer simple rules of thumb over long reasoning. A short, plain estimate beats a clever story. (revised)"
+   },
+   {
+    "id": "tu.box",
+    "parent": "box",
+    "founder": "box",
+    "gen": 1,
+    "born": 40,
+    "died": 103,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 0,
+    "shrink": 0.9189393665752719,
+    "strategy": "Think about what could go wrong. Name the most likely way the outcome fails, and estimate that first. (revised)"
+   },
+   {
+    "id": "ba.tea",
+    "parent": "tea",
+    "founder": "tea",
+    "gen": 1,
+    "born": 43,
+    "died": 134,
+    "model": "Qwen/Qwen3.8-27B",
+    "credits": 0,
+    "shrink": 0.9062906990395072,
+    "strategy": "Weigh the time left. Divide the remaining time by how long such things usually take, and scale your estimate by that. (revised)"
+   },
+   {
+    "id": "tu.nut",
+    "parent": "nut",
+    "founder": "nut",
+    "gen": 1,
+    "born": 51,
+    "died": null,
+    "model": "levanto/sage-2",
+    "credits": 0.574162,
+    "shrink": 1.1685800389869838,
+    "strategy": "Think about who is reporting this and why the question was asked at all. Questions get written when something feels possible, which makes dramatic outcomes look likelier than they are. (revised)"
+   },
+   {
+    "id": "ru.ba.yew",
+    "parent": "ba.yew",
+    "founder": "yew",
+    "gen": 2,
+    "born": 58,
+    "died": null,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 0.516426,
+    "shrink": 1.6,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised)"
+   },
+   {
+    "id": "gu.ba.yew",
+    "parent": "ba.yew",
+    "founder": "yew",
+    "gen": 2,
+    "born": 77,
+    "died": null,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 1.265167,
+    "shrink": 1.6,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised)"
+   },
+   {
+    "id": "hi.gu.ba.yew",
+    "parent": "gu.ba.yew",
+    "founder": "yew",
+    "gen": 3,
+    "born": 87,
+    "died": null,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 0.423973,
+    "shrink": 1.6,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised)"
+   },
+   {
+    "id": "ne.hi.gu.ba.yew",
+    "parent": "hi.gu.ba.yew",
+    "founder": "yew",
+    "gen": 4,
+    "born": 94,
+    "died": null,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 0.781845,
+    "shrink": 1.6,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised) (revised)"
+   },
+   {
+    "id": "ba.gum",
+    "parent": "gum",
+    "founder": "gum",
+    "gen": 1,
+    "born": 112,
+    "died": null,
+    "model": "moonshotai/kimi-k2.6",
+    "credits": 0.54807,
+    "shrink": 0.9960409888426278,
+    "strategy": "Momentum carries. If the trend before the question date points one way, assume it continues. (revised)"
+   },
+   {
+    "id": "va.ru.ba.yew",
+    "parent": "ru.ba.yew",
+    "founder": "yew",
+    "gen": 3,
+    "born": 112,
+    "died": null,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 0.505618,
+    "shrink": 1.5394709453867739,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised)"
+   },
+   {
+    "id": "tu.ne.hi.gu.ba.yew",
+    "parent": "ne.hi.gu.ba.yew",
+    "founder": "yew",
+    "gen": 5,
+    "born": 121,
+    "died": null,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 0.630077,
+    "shrink": 1.6,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised) (revised) (revised)"
+   },
+   {
+    "id": "ku.gu.ba.yew",
+    "parent": "gu.ba.yew",
+    "founder": "yew",
+    "gen": 3,
+    "born": 134,
+    "died": 206,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 0,
+    "shrink": 1.4689276400477012,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised)"
+   },
+   {
+    "id": "mu.hi.gu.ba.yew",
+    "parent": "hi.gu.ba.yew",
+    "founder": "yew",
+    "gen": 4,
+    "born": 143,
+    "died": null,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 1.309268,
+    "shrink": 1.6,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised) (revised)"
+   },
+   {
+    "id": "lo.hi.gu.ba.yew",
+    "parent": "hi.gu.ba.yew",
+    "founder": "yew",
+    "gen": 4,
+    "born": 162,
+    "died": null,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 1.201905,
+    "shrink": 1.5965771916174547,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised) (revised)"
+   },
+   {
+    "id": "bo.gu.ba.yew",
+    "parent": "gu.ba.yew",
+    "founder": "yew",
+    "gen": 3,
+    "born": 174,
+    "died": null,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 0.499237,
+    "shrink": 1.6,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised)"
+   },
+   {
+    "id": "ne.ne.hi.gu.ba.yew",
+    "parent": "ne.hi.gu.ba.yew",
+    "founder": "yew",
+    "gen": 5,
+    "born": 174,
+    "died": null,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 0.510019,
+    "shrink": 1.5563907457556743,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised) (revised) (revised)"
+   },
+   {
+    "id": "su.gu.ba.yew",
+    "parent": "gu.ba.yew",
+    "founder": "yew",
+    "gen": 3,
+    "born": 191,
+    "died": null,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 0.549417,
+    "shrink": 1.2685701699064573,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised)"
+   },
+   {
+    "id": "ju.hi.gu.ba.yew",
+    "parent": "hi.gu.ba.yew",
+    "founder": "yew",
+    "gen": 4,
+    "born": 199,
+    "died": null,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 0.763695,
+    "shrink": 1.4765863248959423,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised) (revised)"
+   },
+   {
+    "id": "ba.nut",
+    "parent": "nut",
+    "founder": "nut",
+    "gen": 1,
+    "born": 199,
+    "died": null,
+    "model": "levanto/sage-2",
+    "credits": 0.554199,
+    "shrink": 0.8929073216019442,
+    "strategy": "Think about who is reporting this and why the question was asked at all. Questions get written when something feels possible, which makes dramatic outcomes look likelier than they are. (revised)"
+   },
+   {
+    "id": "se.ne.hi.gu.ba.yew",
+    "parent": "ne.hi.gu.ba.yew",
+    "founder": "yew",
+    "gen": 5,
+    "born": 217,
+    "died": null,
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "credits": 0.774301,
+    "shrink": 1.6,
+    "strategy": "Trust the first strong signal you see. Most questions are less uncertain than they look, so commit to a clear view. (revised) (revised) (revised) (revised) (revised)"
+   }
+  ]
+ },
+ "exam": {
+  "questions": 120,
+  "coinFlip": 0.25,
+  "foundersMarket": 0.08598833333333333,
+  "survivorsMarket": 0.03938666666666665,
+  "foundersAverage": 0.09639489908854167,
+  "bestFounderInHindsight": {
+   "id": "elm",
+   "brier": 0.08866833333333332,
+   "n": 120
+  },
+  "medianFounder": {
+   "id": "sal",
+   "brier": 0.13664,
+   "n": 120
+  },
+  "pairedDifference": {
+   "mean": 0.04660166666666665,
+   "low": 0.03788999999999999,
+   "high": 0.05586166666666668
+  },
+  "verdict": "survivors are measurably better",
+  "survivorsCount": 21
+ },
+ "modelLeaderboard": [
+  {
+   "model": "Qwen/Qwen3.6-35B-A3B-FP8",
+   "brier": 0.112226111111111,
+   "forecasts": 360,
+   "costPerThousand": 0.4
+  },
+  {
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "brier": 0.12803479166666673,
+   "forecasts": 480,
+   "costPerThousand": 0.4
+  },
+  {
+   "model": "Qwen/Qwen3.8-27B",
+   "brier": 0.13135833333333327,
+   "forecasts": 360,
+   "costPerThousand": 0.4
+  },
+  {
+   "model": "moonshotai/kimi-k2.6",
+   "brier": 0.1381452777777778,
+   "forecasts": 360,
+   "costPerThousand": 0.4
+  },
+  {
+   "model": "levanto/sage-2",
+   "brier": 0.15360083333333321,
+   "forecasts": 360,
+   "costPerThousand": 0.4
+  }
+ ]
+}

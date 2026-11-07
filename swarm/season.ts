@@ -23,7 +23,9 @@ const commitSecs = Number(arg("commit", "14"));
 const revealSecs = Number(arg("reveal", "60"));
 const batchSize = Number(arg("batch", "8"));
 const capital = 1_000_000n;
-const billScripted = 2_000n;
+const billScripted = 3_000n;
+/** Capital is play money, so bills are scaled to cost what they would on a small real budget (R19). */
+const billScale = Number(arg("billscale", c.deployment.network === "mainnet" ? "1" : "8"));
 const bounty = 80_000n;
 const reserve = 40_000n;
 
@@ -116,7 +118,7 @@ async function runQuestion(q: (typeof questions)[number], cfg: { max_stake: numb
         const f = await forecast(g, q).catch(() => null);
         if (!f) return;
         probability = f.probability;
-        bill = BigInt(Math.max(1, Math.ceil(f.reply.cost)));
+        bill = BigInt(Math.max(1, Math.ceil(f.reply.cost * billScale)));
         receipt = f.reply.tee?.response_hash ?? c.sha256Hex(f.reply.content);
         notes[r.id] = f.reasoning;
       } else {
