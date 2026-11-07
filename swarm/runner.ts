@@ -223,7 +223,12 @@ export async function playRound(q: RoundInput, cfg: { max_stake: number }, timin
     if (wait > 0) await c.sleep(wait);
   }
   await c.clear(id);
-  const done = await c.getQuestion(id);
+  // Public RPCs can lag by a block, so wait to read the cleared state.
+  let done = await c.getQuestion(id);
+  for (let i = 0; i < 10 && done.status === "Open"; i++) {
+    await c.sleep(800);
+    done = await c.getQuestion(id);
+  }
   if (done.status === "Void") {
     console.log("  nobody revealed, so the round is void and the bounty goes back");
     await c.sweep([done.opener]);

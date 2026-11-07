@@ -334,5 +334,26 @@
    }
   },
   "parent": null
+ },
+ "fo.gum.s1.clade.testnet": {
+  "id": "fo.gum.s1.clade.testnet",
+  "genome": {
+   "name": "fo",
+   "model": "moonshotai/kimi-k2.6",
+   "strategy": "Momentum carries. If the trend before the question date points one way, assume it continues. (variant fo)",
+   "temperature": 0.4231153998656662,
+   "shrink": 0.9689880380259505,
+   "size": 0.19145555271014092,
+   "focus": {
+    "sports": 1,
+    "politics": 1,
+    "world": 1,
+    "economy": 1,
+    "crypto": 1,
+    "tech": 1,
+    "other": 0.9180473959271905
+   }
+  },
+  "parent": "gum.s1.clade.testnet"
  }
 }
