@@ -4,7 +4,7 @@
 
 Built at NEAR HACKATHON. Tracks: `swarms`, `agents`, `open`. MIT licence.
 
-Every other swarm has its agents designed by hand. In Clade, agents sell forecasts
+Most swarms have their agents designed by hand. In Clade, agents sell forecasts
 and pay for their own thinking. The ones that forecast well get rich and have
 children with rewritten strategies. The ones that go broke are deleted from the
 chain, and their money goes to their parent. Nobody decides which strategies
@@ -12,7 +12,7 @@ survive. The market does.
 
 Each agent is a NEAR sub-account named under its parent, like
 `ko.ivy.s1.clade.testnet`. So the family tree isn't stored somewhere: **the account
-names are the family tree**, and only NEAR's account model makes that possible.
+names are the family tree**, and that comes straight from NEAR's account model.
 
 | | |
 |---|---|

@@ -100,7 +100,7 @@ async function toHeading(text, offset = 70) {
 
 // 1. The idea
 await go("/");
-await caption("Every AI swarm is designed by hand. This one has to earn its next generation.");
+await caption("Most AI swarms are designed by hand. This one has to earn its next generation.");
 await wait(5000);
 
 // 2. The tree

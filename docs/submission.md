@@ -53,7 +53,7 @@ Update this with the AI result before submitting.
 Must say it was built at NEAR HACKATHON, tag @NEARProtocol and #NEARHackathon, and have
 the video or screenshots attached.
 
-> Every AI swarm is designed by hand.
+> Most AI swarms are designed by hand.
 >
 > This one has to earn its next generation.
 >
@@ -80,6 +80,25 @@ Show the real thing. Say nothing that the screen does not show.
 | 1:02 | A child with its rewritten strategy | "Get rich, and you have a child, with a strategy rewritten from your own losses." |
 | 1:12 | The proof page, press Check it yourself | "Nobody tuned this. Everything rebuilds from the chain." |
 | 1:22 | The result chart | State the experiment's real result, whatever it is |
+
+To record it, start the site, then:
+
+```bash
+npm i playwright ffmpeg-static
+npx playwright install chromium
+node tools/demo/record.mjs http://localhost:5173/ docs/demo.mp4
+```
+
+It tours the real site with captions, in about 85 seconds at 720p. It reads the
+snapshot, so a new run after the AI experiment needs no editing, and it only shows the
+experiment's result if real models produced it.
+
+## Hosting the site
+
+`.github/workflows/pages.yml` publishes `web/` to GitHub Pages on every push to `main`.
+Turn it on once, in the repo's settings: Pages, then Build and deployment, then source
+GitHub Actions. The site is static, with its data in `web/public/data/snapshot.json`, so
+run `npm run snapshot` and push to update it.
 
 ## Things only you can do
 
