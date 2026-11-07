@@ -194,7 +194,8 @@ async function joinEveryone(id: number, agents: string[], pledge: bigint, endMs:
 }
 
 async function briefingFor(q: RoundInput, s: Settings) {
-  if (!s.ai) return { text: `A scripted briefing, written for testing. ${q.yes === undefined ? "It has no signal." : `It leans ${q.yes ? "YES" : "NO"}.`}`, model: "scripted", cost: 0, tee: null, request: null, response: null };
+  // A scripted buyer gets its edge from less noise in `scriptedThought`, not from this text.
+  if (!s.ai) return { text: `A scripted stand-in for a research briefing, written to test the contracts. Reference ${randomBytes(4).toString("hex")}.`, model: "scripted", cost: 0, tee: null, request: null, response: null };
   const { text, reply } = await writeBriefing(q);
   return { text, model: BRIEFING_MODEL, cost: reply.cost, tee: reply.tee, request: reply.rawRequest, response: reply.rawResponse };
 }

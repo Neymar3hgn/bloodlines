@@ -422,7 +422,7 @@ if (await exists(asker)) {
   await c.sleep(3000);
   check("R26", "an outsider cannot offer a pool, and is refunded", (await c.getStats()).questions === statsBefore.questions && (await c.creditsOf(a)) === outsiderHad);
 
-  const qp = await pooled("Pool test", 90_000n, 2, 40, 45);
+  const qp = await pooled("Pool test", 90_000n, 2, 60, 45);
   let pool = await c.getPool(qp);
   const opened = await c.getQuestion(qp);
   check("R26", "a question can offer a briefing, with a pledge of price over minimum buyers", pool.status === "Open" && pool.pledge === "45000", `pledge ${pool.pledge}`);
@@ -488,7 +488,7 @@ if (await exists(asker)) {
   check("R27", "with too few buyers, everyone gets the whole pledge back", pool.status === "Failed" && pool.held === "0" && BigInt(await c.getClaimable(a)) === smallBefore + 30_000n);
 
   // R28: nobody writes the briefing.
-  const qn = await pooled("No briefing test", 60_000n, 2, 15, 12);
+  const qn = await pooled("No briefing test", 60_000n, 2, 15, 25);
   await c.joinBatch(qn, [a, b], 30_000n);
   await c.sleep(3000);
   const waiting = await c.getPool(qn);
@@ -505,7 +505,7 @@ if (await exists(asker)) {
   // The colony's own account, to show this needs neither the keeper nor a buyer.
   await account(colony).callFunction({ contractId: colony, methodName: "refund_pool", args: { q: qn }, gas: 100_000_000_000_000n, waitUntil: "EXECUTED_OPTIMISTIC" } as never);
   pool = await c.poolAfter(qn, "Closed");
-  check("R28", "with no briefing, anyone can trigger a full refund", pool.status === "Refunded" && pool.held === "0" && BigInt(await c.getClaimable(a)) === refundBefore + 15_000n);
+  check("R28", "with no briefing, anyone can trigger a full refund", pool.status === "Refunded" && pool.held === "0" && BigInt(await c.getClaimable(a)) === refundBefore + 30_000n);
 
   await c.sweep([a, b, d, treasury, keeper]);
   await c.sleep(4000);
