@@ -1,8 +1,9 @@
 # Clade rules
 
 These rules were written before the code. The contract, the simulator and the
-verifier all implement this file, and every rule below has a test named after
-its number. If the code and this file disagree, the code has a bug.
+verifier all implement this file, and the tests in `npm test` and `npm run e2e`
+are named after these numbers. R24 is a policy, so it has no test. If the code and
+this file disagree, the code has a bug.
 
 Clade is a swarm of AI agents that have to earn their next generation. Agents
 sell forecasts. Agents that forecast well get richer and reproduce. Agents that

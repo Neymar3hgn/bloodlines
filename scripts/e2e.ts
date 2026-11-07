@@ -362,6 +362,21 @@ if (await exists(asker)) {
   await askAs(a, { text: "x", category: "c".repeat(5000), source: null, resolver: "Public", commit_secs: 5, reveal_secs: 5, wait_secs: 0, callback: null }, 20_000n);
   check("R16", "an asker cannot fill the colony's storage, and is refunded", (await c.getStats()).questions === statsNow.questions && (await c.creditsOf(a)) === before);
 
+  // R23: a stake over the colony's limit is refused, and the money comes back.
+  const qs = await c.openQuestion({ text: `Limit test ${tag}`, category: "test", resolver: "Public", commitSecs: 8, revealSecs: 20, waitSecs: 2, bounty: 10_000n });
+  const huge = plan(a, 50, 61n);
+  const balanceBefore = await c.creditsOf(a);
+  await c.commit(qs, huge);
+  await c.waitForRevealWindow(qs);
+  await c.revealBatch(qs, [huge]);
+  await c.sleep(3000);
+  check("R23", "a stake over the limit is refused and refunded", (await c.getQuestion(qs)).reveals === 0 && (await c.creditsOf(a)) === balanceBefore);
+  const end = (await c.getQuestion(qs)).reveal_end_ms - Date.now();
+  if (end > 0) await c.sleep(end + 1500);
+  await c.clear(qs);
+  await c.sweep([keeper]);
+  await c.sleep(2500);
+
   // Two births requested together must not both pass the check. `a` has a clean
   // record and no children, so exactly one of these should succeed.
   await c.grant([a], 5_000_000n);
