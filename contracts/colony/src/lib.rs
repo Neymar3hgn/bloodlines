@@ -223,6 +223,13 @@ pub enum Msg {
     Reveal(RevealMsg),
 }
 
+/// R12: a parent signs this as an intent, so a relayer can pay for the birth.
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
+pub enum AuthMsg {
+    Spawn { label: String, public_key: PublicKey, genome: String },
+}
+
 #[near(serializers = [json])]
 pub struct Stats {
     pub alive: u32,
@@ -337,27 +344,20 @@ impl Colony {
         self.founders_open = false;
     }
 
-    /// R12: an agent asks to have a child. The agent's key calls this.
+    /// R12: an agent asks to have a child, paying its own gas.
     pub fn spawn(&mut self, label: String, public_key: PublicKey, genome: String) -> Promise {
-        let parent = env::predecessor_account_id();
-        let rec = self.agent(&parent);
-        require!(rec.status == Status::Alive, "only a living agent can have a child");
-        require!(rec.strikes == 0, "an agent with a strike cannot have a child");
-        require!(
-            self.settled_total >= rec.last_child_at + self.config.spawn_cooldown || rec.children == 0,
-            "the spawn cooldown has not passed"
-        );
-        self.require_room();
-        let child = self.child_id(&label, &parent);
-        require!(!self.agents.contains_key(&child), "name is taken");
-        ext_verifier::ext(self.config.verifier.clone())
-            .with_static_gas(GAS_VIEW)
-            .mt_balance_of(parent.clone(), self.config.token_id.clone())
-            .then(
-                Self::ext(env::current_account_id())
-                    .with_static_gas(GAS_SPAWN_CHECK)
-                    .on_spawn_balance(parent, child, label, public_key, genome),
-            )
+        self.internal_spawn(env::predecessor_account_id(), label, public_key, genome)
+    }
+
+    /// R12: the same request as a signed intent. The Intents contract has checked
+    /// the signature, so `signer_id` really is the parent and a relayer pays the
+    /// gas. Agents hold almost no NEAR, so this is how they normally reproduce.
+    #[payable]
+    pub fn on_auth(&mut self, signer_id: AccountId, msg: String) -> Promise {
+        require!(env::predecessor_account_id() == self.config.verifier, "only the Intents contract can authorize");
+        match serde_json::from_str::<AuthMsg>(&msg).unwrap_or_else(|_| env::panic_str("bad message")) {
+            AuthMsg::Spawn { label, public_key, genome } => self.internal_spawn(signer_id, label, public_key, genome),
+        }
     }
 
     #[private]
@@ -782,6 +782,27 @@ impl Colony {
 }
 
 impl Colony {
+    fn internal_spawn(&mut self, parent: AccountId, label: String, public_key: PublicKey, genome: String) -> Promise {
+        let rec = self.agent(&parent);
+        require!(rec.status == Status::Alive, "only a living agent can have a child");
+        require!(rec.strikes == 0, "an agent with a strike cannot have a child");
+        require!(
+            self.settled_total >= rec.last_child_at + self.config.spawn_cooldown || rec.children == 0,
+            "the spawn cooldown has not passed"
+        );
+        self.require_room();
+        let child = self.child_id(&label, &parent);
+        require!(!self.agents.contains_key(&child), "name is taken");
+        ext_verifier::ext(self.config.verifier.clone())
+            .with_static_gas(GAS_VIEW)
+            .mt_balance_of(parent.clone(), self.config.token_id.clone())
+            .then(
+                Self::ext(env::current_account_id())
+                    .with_static_gas(GAS_SPAWN_CHECK)
+                    .on_spawn_balance(parent, child, label, public_key, genome),
+            )
+    }
+
     fn only_owner(&self) {
         require!(env::predecessor_account_id() == self.config.owner, "only the owner");
     }

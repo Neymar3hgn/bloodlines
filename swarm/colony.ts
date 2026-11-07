@@ -92,7 +92,7 @@ export async function openQuestion(q: QuestionInput): Promise<number> {
 
 export const commitHash = (q: number, p: OrderPlan) => sha256Hex(`${q}:${p.agent}:${p.belief}:${p.stake}:${p.salt}`);
 
-export const commit = (q: number, p: OrderPlan) => call(p.agent, colony, "commit", { q, hash: commitHash(q, p) }, 30n);
+export const commit = (q: number, p: OrderPlan) => call(p.agent, colony, "commit", { q, hash: commitHash(q, p) }, 8n);
 
 export function revealPayload(q: number, p: OrderPlan, salt: string): MultiPayload {
   const lock = lockFor(p.belief, p.stake);
@@ -115,10 +115,16 @@ export const settle = (q: number, limit = 50) => call(keeper, colony, "settle", 
 export const sweep = (accounts: string[]) => call(keeper, colony, "sweep", { accounts }, 280n);
 export const reap = (agent: string) => call(keeper, colony, "reap", { agent }, 250n);
 
+/** R12: the parent signs, the keeper pays the gas. Agents hold almost no NEAR. */
 export async function spawn(parent: string, label: string, genome: string) {
   const child = `${label}.${parent}`;
   const key = hasKey(child) ? loadKey(child) : saveKey(child, newKey());
-  await call(parent, colony, "spawn", { label, public_key: key.public_key, genome }, 280n);
+  const salt = await currentSalt(verifier);
+  const msg = JSON.stringify({ spawn: { label, public_key: key.public_key, genome } });
+  const payload = signIntents(parent, verifier, salt, [
+    { intent: "auth_call", contract_id: colony, msg, min_gas: "260000000000000" },
+  ]);
+  await executeIntents(keeper, verifier, [payload]);
   return child;
 }
 

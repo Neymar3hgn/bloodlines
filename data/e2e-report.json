@@ -1,0 +1,238 @@
+{
+ "colony": "clade.testnet",
+ "verifier": "verifier.tidepool-sandbox.testnet",
+ "network": "testnet",
+ "at": "2026-11-07T13:23:51.730Z",
+ "passed": 38,
+ "total": 38,
+ "results": [
+  {
+   "rule": "R1",
+   "claim": "every agent is a real account named under its parent",
+   "ok": true,
+   "detail": "eakfpn.clade.testnet"
+  },
+  {
+   "rule": "R3",
+   "claim": "an agent has one key, and it only reaches the colony",
+   "ok": true,
+   "detail": "[\"commit\",\"spawn\"]"
+  },
+  {
+   "rule": "R3",
+   "claim": "an agent's key cannot call any other contract",
+   "ok": true,
+   "detail": "Access key receiver clade.testnet does not match transaction receiver verifier.tidepool-sandbox.testnet"
+  },
+  {
+   "rule": "R2",
+   "claim": "an agent cannot add a founder",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R4",
+   "claim": "an agent's capital sits in its own Intents balance",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R6",
+   "claim": "an agent cannot commit twice",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R7",
+   "claim": "a reveal before the window opens is refused and refunded",
+   "ok": true,
+   "detail": "refunded"
+  },
+  {
+   "rule": "R7",
+   "claim": "a reveal that does not match its commit is refused and refunded",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R7",
+   "claim": "one unfunded reveal fails the whole batch, for everyone",
+   "ok": true,
+   "detail": "all or nothing"
+  },
+  {
+   "rule": "R7",
+   "claim": "signed reveals land together in one transaction",
+   "ok": true,
+   "detail": "2 reveals"
+  },
+  {
+   "rule": "R19",
+   "claim": "bills move to the treasury with the reveal",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R9",
+   "claim": "the round cannot clear while a commit is unrevealed and time remains",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R9",
+   "claim": "the price is the stake-weighted median",
+   "ok": true,
+   "detail": "price 25"
+  },
+  {
+   "rule": "R10",
+   "claim": "agents above the price hold YES, at one price",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R11",
+   "claim": "the agent at the median takes the short side",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R8",
+   "claim": "a commit with no reveal is a strike",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R21",
+   "claim": "a sealed answer cannot be changed",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R17",
+   "claim": "winning shares pay in full, losing shares nothing",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R18",
+   "claim": "only the agent closer to the truth earns the reward",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R20",
+   "claim": "money in equals money out for the question",
+   "ok": true,
+   "detail": "660000 = 660000"
+  },
+  {
+   "rule": "R17",
+   "claim": "swept money reaches the agent's own Intents balance",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R15",
+   "claim": "beating the swarm raises reputation, in the public view",
+   "ok": true,
+   "detail": "reputation 787"
+  },
+  {
+   "rule": "R12",
+   "claim": "a poor agent cannot have a child",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R1",
+   "claim": "a child's account exists, named under its parent",
+   "ok": true,
+   "detail": "chkfpn.ebkfpn.clade.testnet"
+  },
+  {
+   "rule": "R12",
+   "claim": "the child receives half its parent's balance",
+   "ok": true,
+   "detail": "2187000"
+  },
+  {
+   "rule": "R12",
+   "claim": "the child is alive and one generation on",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R15",
+   "claim": "a newborn inherits its parent's reputation",
+   "ok": true,
+   "detail": "prior 787"
+  },
+  {
+   "rule": "R14",
+   "claim": "the lineage view walks back to the founder",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R7",
+   "claim": "a child can sign intents as soon as it is born",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R12",
+   "claim": "the spawn cooldown stops a second child",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R13",
+   "claim": "a solvent agent cannot be reaped",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R13",
+   "claim": "a broke agent's account is deleted from the chain",
+   "ok": true,
+   "detail": "chkfpn.ebkfpn.clade.testnet"
+  },
+  {
+   "rule": "R13",
+   "claim": "its credits go to its parent",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R14",
+   "claim": "the colony keeps the dead agent's record",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R13",
+   "claim": "an agent cannot be reaped twice",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R13",
+   "claim": "a founder with no living ancestor pays the treasury",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R14",
+   "claim": "a child keeps running after its parent is deleted",
+   "ok": true,
+   "detail": "orkfpn.eekfpn.clade.testnet"
+  },
+  {
+   "rule": "R14",
+   "claim": "an orphan can still trade under its dead parent's name",
+   "ok": true,
+   "detail": ""
+  }
+ ]
+}

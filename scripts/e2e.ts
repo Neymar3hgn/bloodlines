@@ -157,7 +157,7 @@ check("R15", "beating the swarm raises reputation, in the public view", repB > 0
 
 // ---------- Birth ----------
 err = await rejects(() => c.spawn(a, `no${tag}`, genome("no")));
-await c.sleep(1500);
+await c.sleep(4000);
 check("R12", "a poor agent cannot have a child", !(await exists(`no${tag}.${a}`)));
 
 await c.grant([b], 3_000_000n);
@@ -175,7 +175,7 @@ const hasVerifierKey = await view<boolean>(verifier, "has_public_key", { account
 check("R7", "a child can sign intents as soon as it is born", hasVerifierKey);
 
 err = await rejects(() => c.spawn(b, `cd${tag}`, genome("too soon")));
-await c.sleep(1500);
+await c.sleep(4000);
 check("R12", "the spawn cooldown stops a second child", !(await exists(`cd${tag}.${b}`)));
 
 // ---------- Death ----------
