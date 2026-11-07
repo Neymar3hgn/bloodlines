@@ -165,6 +165,7 @@ export async function revealBatch(q: number, plans: OrderPlan[]) {
 export const clear = (q: number) => call(keeper, colony, "clear", { q }, 200n);
 export const resolveSealed = (q: number, yes: boolean, salt: string) => call(keeper, colony, "resolve_sealed", { q, yes, salt }, 30n);
 export const resolvePublic = (q: number, yes: boolean, evidence: string) => call(keeper, colony, "resolve_public", { q, yes, evidence }, 30n);
+export const resolveOnchain = (q: number) => call(keeper, colony, "resolve_onchain", { q }, 120n);
 export const settle = (q: number, limit = 50) => call(keeper, colony, "settle", { q, limit }, 280n);
 export const sweep = (accounts: string[]) => call(keeper, colony, "sweep", { accounts }, 280n);
 export const reap = (agent: string) => call(keeper, colony, "reap", { agent }, 250n);

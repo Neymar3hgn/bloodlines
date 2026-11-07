@@ -154,6 +154,10 @@ name = "clade-agent"
 version = "0.1.0"
 
 [[package]]
+name = "clade-asker"
+version = "0.1.0"
+
+[[package]]
 name = "clade-colony"
 version = "0.1.0"
 dependencies = [

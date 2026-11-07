@@ -2,15 +2,15 @@
  "colony": "clade.testnet",
  "verifier": "verifier.tidepool-sandbox.testnet",
  "network": "testnet",
- "at": "2026-11-07T13:23:51.730Z",
- "passed": 38,
- "total": 38,
+ "at": "2026-11-07T14:03:25.926Z",
+ "passed": 45,
+ "total": 45,
  "results": [
   {
    "rule": "R1",
    "claim": "every agent is a real account named under its parent",
    "ok": true,
-   "detail": "eakfpn.clade.testnet"
+   "detail": "eav4ou.clade.testnet"
   },
   {
    "rule": "R3",
@@ -22,7 +22,7 @@
    "rule": "R3",
    "claim": "an agent's key cannot call any other contract",
    "ok": true,
-   "detail": "Access key receiver clade.testnet does not match transaction receiver verifier.tidepool-sandbox.testnet"
+   "detail": "Exceeded 4 providers to execute request"
   },
   {
    "rule": "R2",
@@ -148,7 +148,7 @@
    "rule": "R1",
    "claim": "a child's account exists, named under its parent",
    "ok": true,
-   "detail": "chkfpn.ebkfpn.clade.testnet"
+   "detail": "chv4ou.ebv4ou.clade.testnet"
   },
   {
    "rule": "R12",
@@ -196,7 +196,7 @@
    "rule": "R13",
    "claim": "a broke agent's account is deleted from the chain",
    "ok": true,
-   "detail": "chkfpn.ebkfpn.clade.testnet"
+   "detail": "chv4ou.ebv4ou.clade.testnet"
   },
   {
    "rule": "R13",
@@ -226,11 +226,53 @@
    "rule": "R14",
    "claim": "a child keeps running after its parent is deleted",
    "ok": true,
-   "detail": "orkfpn.eekfpn.clade.testnet"
+   "detail": "orv4ou.eev4ou.clade.testnet"
   },
   {
    "rule": "R14",
    "claim": "an orphan can still trade under its dead parent's name",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R22",
+   "claim": "a contract that asked is called back with the answer",
+   "ok": true,
+   "detail": "{\"question_id\":12,\"price\":30}"
+  },
+  {
+   "rule": "R22",
+   "claim": "anyone can read the answer from the contract",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R21",
+   "claim": "only the named resolver can post a public result",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R21",
+   "claim": "the public result and its source are on record",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R21",
+   "claim": "an on-chain question cannot resolve before its time",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R21",
+   "claim": "an on-chain question resolves itself by reading a contract",
+   "ok": true,
+   "detail": "on-chain value 1000000000000"
+  },
+  {
+   "rule": "R21",
+   "claim": "an outsider cannot open a sealed question, and is refunded",
    "ok": true,
    "detail": ""
   }

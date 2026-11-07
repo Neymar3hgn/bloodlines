@@ -883,8 +883,10 @@ impl Colony {
         require!(amount >= self.config.min_bounty.0, "bounty is below the minimum");
         require!(!ask.text.is_empty() && ask.text.len() <= MAX_QUESTION_LEN, "bad question length");
         require!(ask.commit_secs > 0 && ask.reveal_secs > 0, "bad windows");
-        if matches!(ask.resolver, Resolver::Public) || matches!(ask.resolver, Resolver::Sealed { .. }) {
-            require!(opener == self.config.keeper, "only the keeper can open off-chain questions");
+        // Anyone can ask a public or on-chain question. A sealed one needs the
+        // keeper, because whoever opens it knows the answer.
+        if matches!(ask.resolver, Resolver::Sealed { .. }) {
+            require!(opener == self.config.keeper, "only the keeper can open sealed questions");
         }
         let id = self.questions.len() as u64;
         let now = env::block_timestamp_ms();

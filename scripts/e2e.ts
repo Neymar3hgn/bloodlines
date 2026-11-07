@@ -217,6 +217,62 @@ await c.clear(q2);
 await c.resolveSealed(q2, orphanSeal.yes, orphanSeal.salt);
 await c.settle(q2);
 
+// ---------- The swarm as a public oracle ----------
+const asker = `asker.${colony}`;
+if (await exists(asker)) {
+  const q3 = await c.openQuestion({ text: `Callback test ${tag}`, category: "test", resolver: "Public", commitSecs: 10, revealSecs: 30, bounty: 20_000n, callback: asker });
+  const low = plan(a, 30, 5n);
+  const high = plan(b, 80, 5n);
+  await Promise.all([c.commit(q3, low), c.commit(q3, high)]);
+  await c.waitForRevealWindow(q3);
+  await c.revealBatch(q3, [low, high]);
+  await c.sleep(2500);
+  await c.clear(q3);
+  await c.sleep(3000);
+  const answer = await view<any>(asker, "last_answer");
+  const q3row = await c.getQuestion(q3);
+  check("R22", "a contract that asked is called back with the answer", answer?.question_id === q3 && answer?.price === q3row.price, JSON.stringify(answer));
+  const pub = await view<any>(colony, "get_answer", { q: q3 });
+  check("R22", "anyone can read the answer from the contract", pub?.price === q3row.price);
+  err = await rejects(() => account(a).callFunction({ contractId: colony, methodName: "resolve_public", args: { q: q3, yes: true, evidence: "x" }, gas: 30_000_000_000_000n } as never));
+  check("R21", "only the named resolver can post a public result", !!err);
+  await c.resolvePublic(q3, true, "https://example.com/result");
+  check("R21", "the public result and its source are on record", (await c.getQuestion(q3)).evidence === "https://example.com/result");
+  await c.settle(q3);
+
+  const after_ms = Date.now() + 45_000;
+  const q4 = await c.openQuestion({
+    text: `On-chain test ${tag}: is the token's total supply at least 1,000 units?`,
+    category: "test",
+    resolver: { OnChain: { contract: `tusd.${colony}`, method: "ft_total_supply", args: "{}", after_ms, at_least: "1000" } },
+    commitSecs: 8,
+    revealSecs: 25,
+    bounty: 20_000n,
+  });
+  const n1 = plan(a, 35, 4n);
+  const n2 = plan(b, 75, 4n);
+  await Promise.all([c.commit(q4, n1), c.commit(q4, n2)]);
+  await c.waitForRevealWindow(q4);
+  await c.revealBatch(q4, [n1, n2]);
+  await c.sleep(2500);
+  await c.clear(q4);
+  err = await rejects(() => c.resolveOnchain(q4));
+  check("R21", "an on-chain question cannot resolve before its time", !!err);
+  await c.sleep(Math.max(0, after_ms - Date.now()) + 3000);
+  await c.resolveOnchain(q4);
+  await c.sleep(4000);
+  const q4row = await c.getQuestion(q4);
+  check("R21", "an on-chain question resolves itself by reading a contract", q4row.yes_won === true, q4row.evidence ?? "");
+  await c.settle(q4);
+
+  const salt = await currentSalt(verifier);
+  const before = await c.creditsOf(a);
+  const sneaky = JSON.stringify({ ask: { text: "x", category: "x", source: null, resolver: { Sealed: { hash: "ab" } }, commit_secs: 5, reveal_secs: 5, callback: null } });
+  await executeIntents(keeper, verifier, [signIntents(a, verifier, salt, [transferIntent(colony, tokenId, 20_000n, sneaky, "20000000000000")])]);
+  await c.sleep(3000);
+  check("R21", "an outsider cannot open a sealed question, and is refunded", (await c.creditsOf(a)) === before);
+}
+
 const passed = results.filter((r) => r.ok).length;
 console.log(`\n${passed} of ${results.length} checks passed`);
 writeFileSync("data/e2e-report.json", JSON.stringify({ colony, verifier, network: c.deployment.network, at: new Date().toISOString(), passed, total: results.length, results }, null, 1));

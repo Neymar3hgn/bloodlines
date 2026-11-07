@@ -1,0 +1,10 @@
+[package]
+name = "clade-asker"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "A minimal example of a contract that receives the swarm's answer."
+
+[lib]
+crate-type = ["cdylib"]
+test = false

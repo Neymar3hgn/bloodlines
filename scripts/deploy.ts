@@ -139,6 +139,14 @@ if (!(await isDeployed(ROOT))) {
   console.log("  deployed");
 } else console.log("  already deployed");
 
+console.log("6. Example contract that receives the swarm's answer");
+const asker = `asker.${ROOT}`;
+await subAccount(asker, 0.08);
+if (!(await isDeployed(asker))) {
+  await account(asker).signAndSendTransaction({ receiverId: asker, actions: [actions.deployContract(readFileSync("res/clade_asker.wasm"))], waitUntil: "EXECUTED_OPTIMISTIC" } as never);
+  console.log("  deployed");
+}
+
 const deployment = { network: NETWORK, colony: ROOT, keeper: KEEPER, verifier: VERIFIER, token_id: TOKEN_ID, treasury: TREASURY, agent_code: CODE };
 writeFileSync(`data/deployment.${NETWORK}.json`, JSON.stringify(deployment, null, 2) + "\n");
 console.log("Stats:", await view(ROOT, "get_stats"));
