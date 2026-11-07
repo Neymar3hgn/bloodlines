@@ -1,10 +1,10 @@
-/** Runs the scripted colony with no language model calls. Usage: node sim/run.ts [--seeds N] */
+/** Runs the scripted colony with no language model calls. Usage: node sim/run.ts [--seeds N]. The published numbers use 8 seeds. */
 import { writeFileSync } from "node:fs";
 import { blindLieAudit, lyingAudit, pumpAttack } from "./gaming.ts";
 import { DEFAULTS, runColony, type Bucket } from "./world.ts";
 
 const seedsArg = process.argv.indexOf("--seeds");
-const seeds = seedsArg > 0 ? Number(process.argv[seedsArg + 1]) : 10;
+const seeds = seedsArg > 0 ? Number(process.argv[seedsArg + 1]) : 3;
 
 const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
 const sum = <T,>(xs: T[], g: (x: T) => number) => xs.reduce((t, x) => t + g(x), 0);
@@ -81,7 +81,8 @@ for (const p of pumps) {
 }
 
 const replacer = (_k: string, v: unknown) => (typeof v === "bigint" ? v.toString() : v);
-writeFileSync(
+// A short run prints its numbers but leaves the published report alone.
+if (seeds >= 8) writeFileSync(
   "data/sim-report.json",
   JSON.stringify(
     {
@@ -98,4 +99,4 @@ writeFileSync(
     1,
   ),
 );
-console.log("\nWrote data/sim-report.json");
+console.log(seeds >= 8 ? "\nWrote data/sim-report.json" : "\nFor the published numbers, run: npm run sim -- --seeds 8");
