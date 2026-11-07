@@ -32,6 +32,13 @@ const GAS_ORACLE_DONE: Gas = Gas::from_tgas(10);
 
 const AGENT_METHODS: &str = "commit,spawn";
 const MAX_QUESTION_LEN: usize = 400;
+const MAX_CATEGORY_LEN: usize = 32;
+const MAX_SOURCE_LEN: usize = 256;
+const MAX_GENOME_LEN: usize = 4_000;
+const MAX_METHOD_LEN: usize = 64;
+const MAX_ORACLE_ARGS_LEN: usize = 512;
+const MAX_RECEIPT_LEN: usize = 64;
+const MAX_WINDOW_SECS: u64 = 7 * 24 * 3600;
 const MAX_ACCOUNT_LEN: usize = 64;
 const STRIKES_TO_REAP: u8 = 3;
 
@@ -78,6 +85,10 @@ pub struct Config {
     pub treasury: AccountId,
     /// The account holding the global agent contract.
     pub agent_code: AccountId,
+    /// Makes on-chain reads, so an asker's chosen call never comes from the colony.
+    pub reader: AccountId,
+    /// R25: how long after its window a question can wait for a result.
+    pub max_wait_secs: u64,
     pub floor: U128,
     pub spawn_threshold: U128,
     pub endowment_bps: u32,
@@ -158,6 +169,8 @@ pub struct Question {
     pub opened_ms: u64,
     pub commit_end_ms: u64,
     pub reveal_end_ms: u64,
+    /// R25: after this, anyone can void the question.
+    pub expires_ms: u64,
     pub status: QStatus,
     pub bounty: U128,
     pub pool: U128,
@@ -202,6 +215,10 @@ pub struct AskMsg {
     pub resolver: Resolver,
     pub commit_secs: u64,
     pub reveal_secs: u64,
+    /// R25: how long to wait for a result. Zero or anything over the colony's
+    /// `max_wait_secs` means `max_wait_secs`.
+    #[serde(default)]
+    pub wait_secs: u64,
     pub callback: Option<AccountId>,
 }
 
@@ -312,6 +329,7 @@ impl Colony {
     pub fn add_founder(&mut self, label: String, public_key: PublicKey, genome: String) -> Promise {
         self.only_owner();
         require!(self.founders_open, "the season has started");
+        require!(genome.len() <= MAX_GENOME_LEN, "genome is too long");
         self.require_room();
         let id = self.child_id(&label, &env::current_account_id());
         require!(!self.agents.contains_key(&id), "name is taken");
@@ -374,6 +392,9 @@ impl Colony {
         require!(balance >= self.config.spawn_threshold.0, "balance is below the spawn threshold");
         self.require_room();
         let rec = self.agent(&parent);
+        // The balance read was asynchronous, so check everything again: two
+        // requests could otherwise pass the first check together.
+        self.require_can_spawn(&rec, &child);
         let credits = balance * self.config.endowment_bps as u128 / 10_000;
         let genome_hash = hex(&env::sha256(genome.as_bytes()));
         let prior = self.reputation_of(&rec);
@@ -428,6 +449,9 @@ impl Colony {
         let balance = balance.unwrap_or_else(|_| env::panic_str("could not read the balance")).0;
         let mut rec = self.agent(&agent);
         require!(rec.status == Status::Alive, "agent is already dead");
+        // The balance read was asynchronous, so the agent may have traded since.
+        require!(rec.open == 0, "agent has open positions");
+        require!(self.claimable_of(&agent) == 0, "agent has unswept money");
         require!(
             balance < self.config.floor.0 || rec.strikes >= STRIKES_TO_REAP,
             "agent is solvent and has no strikes"
@@ -578,8 +602,10 @@ impl Colony {
             env::panic_str("not an on-chain question")
         };
         require!(env::block_timestamp_ms() >= after_ms, "too early to resolve");
-        Promise::new(contract)
-            .function_call(method, args.into_bytes(), NO_DEPOSIT, GAS_ORACLE)
+        // The asker chose this contract and method, so the call must not come
+        // from the colony, which agents obey. The reader has no authority.
+        Promise::new(self.config.reader.clone())
+            .function_call("read".to_string(), format!("{contract}\n{method}\n{args}").into_bytes(), NO_DEPOSIT, GAS_ORACLE)
             .then(Self::ext(env::current_account_id()).with_static_gas(GAS_ORACLE_DONE).on_oracle(q))
     }
 
@@ -595,15 +621,20 @@ impl Colony {
         self.finish_resolution(q, number >= at_least.0, Some(format!("on-chain value {number}")));
     }
 
-    /// The keeper can void a question whose source vanished. Everyone gets their cost back.
+    /// The keeper can void a question whose source vanished. Everyone gets their
+    /// cost back, and the asker gets the bounty back.
     pub fn void_question(&mut self, q: u64, evidence: String) {
         require!(env::predecessor_account_id() == self.config.keeper, "only the keeper");
-        let mut question = self.question(q);
-        require!(question.status == QStatus::Cleared, "question is not cleared");
-        question.status = QStatus::Resolved;
-        question.yes_won = None;
-        question.evidence = Some(evidence);
-        self.questions.replace(q as u32, question);
+        require!(evidence.len() <= MAX_SOURCE_LEN, "evidence is too long");
+        self.finish_void(q, evidence);
+    }
+
+    /// R25: if a result never comes, anyone can void the question, so a missing
+    /// keeper can never lock an agent's money.
+    pub fn expire(&mut self, q: u64) {
+        let question = self.question(q);
+        require!(env::block_timestamp_ms() >= question.expires_ms, "the question has not expired");
+        self.finish_void(q, "expired with no result".to_string());
     }
 
     /// R17, R18, R20: pays out a resolved question, `limit` orders at a time.
@@ -670,9 +701,11 @@ impl Colony {
         }
         question.cursor = end;
         if end == question.reveals {
-            // R18: rounding dust, or the whole pool if nobody beat the swarm.
+            // R18: rounding dust, or the whole pool if nobody beat the swarm. A voided
+            // question has no winners, so its pool goes back to the asker.
             let left = question.pool.0 - question.rewarded.0;
-            self.credit(&self.config.treasury.clone(), left);
+            let to = if outcome.is_some() { self.config.treasury.clone() } else { question.opener.clone() };
+            self.credit(&to, left);
             question.status = QStatus::Settled;
             self.settled_total += 1;
             event("settle", json!({"q": q, "yes_won": question.yes_won, "rewarded": question.rewarded, "paid": question.paid}));
@@ -782,17 +815,23 @@ impl Colony {
 }
 
 impl Colony {
-    fn internal_spawn(&mut self, parent: AccountId, label: String, public_key: PublicKey, genome: String) -> Promise {
-        let rec = self.agent(&parent);
+    /// R12, except the balance. Runs twice, because reading the balance is asynchronous.
+    fn require_can_spawn(&self, rec: &AgentRec, child: &AccountId) {
         require!(rec.status == Status::Alive, "only a living agent can have a child");
         require!(rec.strikes == 0, "an agent with a strike cannot have a child");
         require!(
             self.settled_total >= rec.last_child_at + self.config.spawn_cooldown || rec.children == 0,
             "the spawn cooldown has not passed"
         );
-        self.require_room();
+        require!(!self.agents.contains_key(child), "name is taken");
+    }
+
+    fn internal_spawn(&mut self, parent: AccountId, label: String, public_key: PublicKey, genome: String) -> Promise {
+        require!(genome.len() <= MAX_GENOME_LEN, "genome is too long");
+        let rec = self.agent(&parent);
         let child = self.child_id(&label, &parent);
-        require!(!self.agents.contains_key(&child), "name is taken");
+        self.require_can_spawn(&rec, &child);
+        self.require_room();
         ext_verifier::ext(self.config.verifier.clone())
             .with_static_gas(GAS_VIEW)
             .mt_balance_of(parent.clone(), self.config.token_id.clone())
@@ -882,15 +921,32 @@ impl Colony {
     fn handle_ask(&mut self, opener: AccountId, amount: u128, ask: AskMsg) {
         require!(amount >= self.config.min_bounty.0, "bounty is below the minimum");
         require!(!ask.text.is_empty() && ask.text.len() <= MAX_QUESTION_LEN, "bad question length");
-        require!(ask.commit_secs > 0 && ask.reveal_secs > 0, "bad windows");
-        // Anyone can ask a public or on-chain question. A sealed one needs the
-        // keeper, because whoever opens it knows the answer.
-        if matches!(ask.resolver, Resolver::Sealed { .. }) {
-            require!(opener == self.config.keeper, "only the keeper can open sealed questions");
-        }
-        let id = self.questions.len() as u64;
+        // The colony pays for this storage, so an asker cannot be allowed to fill it.
+        require!(ask.category.len() <= MAX_CATEGORY_LEN, "category is too long");
+        require!(ask.source.as_ref().map_or(true, |s| s.len() <= MAX_SOURCE_LEN), "source is too long");
+        require!(ask.commit_secs > 0 && ask.commit_secs <= MAX_WINDOW_SECS, "bad commit window");
+        require!(ask.reveal_secs > 0 && ask.reveal_secs <= MAX_WINDOW_SECS, "bad reveal window");
+        let longest = self.config.max_wait_secs;
+        let wait = if ask.wait_secs == 0 || ask.wait_secs > longest { longest } else { ask.wait_secs } * 1000;
         let now = env::block_timestamp_ms();
         let commit_end_ms = now + ask.commit_secs * 1000;
+        let reveal_end_ms = commit_end_ms + ask.reveal_secs * 1000;
+        let mut expires_ms = reveal_end_ms + wait;
+        match &ask.resolver {
+            // Anyone can ask a public or on-chain question. A sealed one needs the
+            // keeper, because whoever opens it knows the answer.
+            Resolver::Sealed { hash } => {
+                require!(opener == self.config.keeper, "only the keeper can open sealed questions");
+                require!(hash.len() == 64, "bad seal");
+            }
+            Resolver::Public => {}
+            Resolver::OnChain { method, args, after_ms, .. } => {
+                require!(method.len() <= MAX_METHOD_LEN && args.len() <= MAX_ORACLE_ARGS_LEN, "on-chain read is too long");
+                require!(!method.contains('\n'), "bad method");
+                expires_ms = core::cmp::max(expires_ms, *after_ms + wait);
+            }
+        }
+        let id = self.questions.len() as u64;
         let question = Question {
             id,
             text: ask.text,
@@ -900,7 +956,8 @@ impl Colony {
             resolver: ask.resolver,
             opened_ms: now,
             commit_end_ms,
-            reveal_end_ms: commit_end_ms + ask.reveal_secs * 1000,
+            reveal_end_ms,
+            expires_ms,
             status: QStatus::Open,
             bounty: U128(amount),
             pool: U128(0),
@@ -932,6 +989,7 @@ impl Colony {
         require!(now >= question.commit_end_ms && now < question.reveal_end_ms, "the reveal window is closed");
         require!(r.belief >= 1 && r.belief <= 99, "belief must be 1 to 99");
         require!(r.stake > 0 && r.stake <= self.config.max_stake, "stake is out of bounds");
+        require!(r.receipt.len() <= MAX_RECEIPT_LEN, "receipt is too long");
         require!(rec.open < self.config.max_open, "too many open questions");
         let key = (r.q, agent.clone());
         let committed = self.commits.remove(&key).unwrap_or_else(|| env::panic_str("no commit to reveal"));
@@ -962,6 +1020,16 @@ impl Colony {
         question.billed = U128(question.billed.0 + r.bill.0);
         self.questions.replace(r.q as u32, question);
         event("reveal", json!({"q": r.q, "agent": agent, "belief": r.belief, "stake": r.stake, "bill": r.bill}));
+    }
+
+    fn finish_void(&mut self, q: u64, evidence: String) {
+        let mut question = self.question(q);
+        require!(question.status == QStatus::Cleared, "question is not cleared");
+        question.status = QStatus::Resolved;
+        question.yes_won = None;
+        question.evidence = Some(evidence);
+        self.questions.replace(q as u32, question);
+        event("resolve", json!({"q": q, "yes_won": Value::Null}));
     }
 
     fn finish_resolution(&mut self, q: u64, yes: bool, evidence: Option<String>) {

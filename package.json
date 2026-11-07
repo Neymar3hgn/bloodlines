@@ -9,7 +9,7 @@
                     "node":  "\u003e=22.18"
                 },
     "scripts":  {
-                    "test":  "node --test engine/market.test.ts sim/world.test.ts",
+                    "test":  "node --test engine/market.test.ts sim/world.test.ts swarm/llm.test.ts",
                     "sim":  "node sim/run.ts",
                     "vectors":  "node scripts/make-vectors.ts",
                     "build":  "powershell -NoProfile -File scripts/build.ps1",

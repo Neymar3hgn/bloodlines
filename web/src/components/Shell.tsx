@@ -1,0 +1,95 @@
+import type { ReactNode } from "react";
+import { Account } from "./bits";
+import { age, stamp } from "../data/format";
+import { useLiveStats, useModel, useNow } from "../hooks";
+import type { Route } from "../router";
+
+const NAV: { href: string; label: string; match: Route["name"][] }[] = [
+  { href: "#/", label: "Tree", match: ["home", "agent"] },
+  { href: "#/rounds", label: "Rounds", match: ["rounds", "round"] },
+  { href: "#/proof", label: "Proof", match: ["proof"] },
+  { href: "#/ask", label: "Ask", match: ["ask"] },
+];
+
+function LiveBadge() {
+  const m = useModel();
+  const live = useLiveStats();
+  const now = useNow(5_000);
+  if (m.snapshot.fixture) {
+    return <span className="live is-fixture">Fixture data</span>;
+  }
+  const generated = Date.parse(m.snapshot.generated);
+  if (live.stats && live.readAt) {
+    return (
+      <span className="live is-on" title={`Read get_stats from ${m.snapshot.colony}`}>
+        <span className="live-dot" aria-hidden="true" />
+        Live, read {age(now - live.readAt)}
+      </span>
+    );
+  }
+  return (
+    <span className="live" title={`Snapshot written ${stamp(generated)}`}>
+      <span className="live-dot" aria-hidden="true" />
+      Snapshot, {age(now - generated).replace(" ago", " old")}
+    </span>
+  );
+}
+
+function ModeBanner() {
+  const m = useModel();
+  if (m.snapshot.fixture) {
+    return <p className="banner is-fixture">Fixture data from web/dev. This never ships. Nothing here happened on chain.</p>;
+  }
+  if (m.snapshot.mode === "ai") return null;
+  return <p className="banner">These rounds used scripted agents, not AI. It is a test of the contracts.</p>;
+}
+
+export function Shell({ route, children }: { route: Route; children: ReactNode }) {
+  const m = useModel();
+  const { colony, network, generated } = m.snapshot;
+  return (
+    <>
+      <a className="skip" href="#main" onClick={(e) => {
+        e.preventDefault();
+        document.getElementById("main")?.focus();
+      }}>
+        Skip to the page
+      </a>
+      <header className="masthead">
+        <a className="wordmark" href="#/">
+          Clade
+        </a>
+        <nav aria-label="Pages">
+          {NAV.map((item) => (
+            <a key={item.href} href={item.href} aria-current={item.match.includes(route.name) ? "page" : undefined}>
+              {item.label}
+            </a>
+          ))}
+        </nav>
+        <LiveBadge />
+      </header>
+      <ModeBanner />
+      <main id="main" tabIndex={-1}>
+        {children}
+      </main>
+      <footer className="colophon">
+        <p>
+          Clade is a NEAR HACKATHON project, AI Swarms track. Colony <Account id={colony} /> on {network}.
+        </p>
+        <p>Pages are built from a snapshot of the chain written {stamp(Date.parse(generated))}.</p>
+      </footer>
+    </>
+  );
+}
+
+/** Used before there is any data to show. */
+export function Frame({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <header className="masthead">
+        <span className="wordmark">Clade</span>
+      </header>
+      <main id="main">{children}</main>
+    </>
+  );
+}

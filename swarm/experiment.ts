@@ -16,7 +16,7 @@ import { clear, lockFor, settle, type Order } from "../engine/market.ts";
 import { inPool } from "./chain.ts";
 import { childLabel, engages, gaussian, mutateNumbers, toOrder, type Genome, type Rng } from "./genome.ts";
 import { founders, MODELS } from "./founders.ts";
-import { cacheKey, forecast, loadCache, rewriteStrategy, saveCache, type QuestionText } from "./llm.ts";
+import { AccountProblem, cacheKey, forecast, loadCache, rewriteStrategy, saveCache, type QuestionText } from "./llm.ts";
 
 const flag = (name: string) => process.argv.includes(`--${name}`);
 const option = (name: string, dflt: number) => {
@@ -26,7 +26,8 @@ const option = (name: string, dflt: number) => {
 
 const scripted = flag("scripted");
 const replay = flag("replay");
-const RUN = scripted ? "scripted" : "experiment";
+const runIndex = process.argv.indexOf("--run");
+const RUN = runIndex > 0 ? process.argv[runIndex + 1] : scripted ? "scripted" : "experiment";
 const SEED = option("seed", 7);
 const TRAIN = option("train", 240);
 const EXAM = option("exam", 120);
@@ -118,6 +119,9 @@ async function answer(g: Genome, q: Q): Promise<Answer | null> {
   }
   if (spent > BUDGET) throw new Error(`budget of $${BUDGET} reached`);
   const f = await forecast(g, q).catch((e) => {
+    // An account problem would fail every call, so it stops the run. Answers so far
+    // are saved, and the same command picks up where this left off.
+    if (e instanceof AccountProblem) throw e;
     console.log(`  forecast failed for ${g.model}: ${String(e.message).slice(0, 100)}`);
     return null;
   });
@@ -432,7 +436,7 @@ const report = {
   seed: SEED,
   rules: Object.fromEntries(Object.entries(RULES).map(([k, v]) => [k, String(v)])),
   questions: { season: train.length, exam: exam.length, from: "data/questions.json" },
-  usage: { spentUsd: spent, modelCalls: calls, cachedAnswers: cached, verifiedReceipts },
+  usage: { spentUsd: spent, modelCalls: calls, cachedAnswers: cached, verifiedReceipts, signedAnswers: [...cache.values()].filter((row) => row.tee?.verified).length },
   season: {
     alive: survivors.length,
     total: season.agents.length,
@@ -458,7 +462,7 @@ const report = {
   },
   modelLeaderboard: leaderboard,
 };
-writeFileSync(scripted ? "data/experiment-scripted.json" : "data/experiment.json", JSON.stringify(report, null, 1));
+writeFileSync(RUN === "experiment" ? "data/experiment.json" : `data/experiment-${RUN}.json`, JSON.stringify(report, null, 1));
 
 console.log(`\nExam on ${exam.length} new questions. Lower is better, a coin flip scores ${coinFlip}.`);
 console.log(`  Founders, market answer   : ${avg(fb).toFixed(4)}`);

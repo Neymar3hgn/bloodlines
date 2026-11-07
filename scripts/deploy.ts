@@ -17,6 +17,8 @@ const TOKEN_ID = process.env.CLADE_TOKEN ?? `nep141:${tokenAccount}`;
 const KEEPER = `keeper.${ROOT}`;
 const CODE = `code.${ROOT}`;
 const TREASURY = `treasury.${ROOT}`;
+const READER = `reader.${ROOT}`;
+const fresh = process.argv.includes("--fresh");
 
 const root = account(ROOT);
 
@@ -47,6 +49,7 @@ console.log(`Deploying on ${NETWORK}. ${ROOT} holds ${(await nearBalance(ROOT)).
 console.log("1. Accounts");
 await subAccount(KEEPER, 0.4);
 await subAccount(CODE, 0.62);
+await subAccount(READER, 0.03);
 if (NETWORK === "testnet") await subAccount(tokenAccount, 1.62);
 
 console.log("2. Agent code, as a global contract");
@@ -111,8 +114,14 @@ if (!hasPk) {
   console.log("  registered");
 } else console.log("  already registered");
 
-console.log("5. Colony");
-if (!(await isDeployed(ROOT))) {
+console.log("5. Reader, which makes on-chain reads with no authority");
+if (!(await isDeployed(READER))) {
+  await account(READER).signAndSendTransaction({ receiverId: READER, actions: [actions.deployContract(readFileSync("res/clade_reader.wasm"))], waitUntil: "EXECUTED_OPTIMISTIC" } as never);
+  console.log("  deployed");
+} else console.log("  already deployed");
+
+console.log("6. Colony");
+if (!(await isDeployed(ROOT)) || fresh) {
   const config = {
     owner: ROOT,
     keeper: KEEPER,
@@ -120,6 +129,8 @@ if (!(await isDeployed(ROOT))) {
     token_id: TOKEN_ID,
     treasury: TREASURY,
     agent_code: CODE,
+    reader: READER,
+    max_wait_secs: 14 * 24 * 3600,
     floor: "350000",
     spawn_threshold: "1500000",
     endowment_bps: 5000,
@@ -139,7 +150,7 @@ if (!(await isDeployed(ROOT))) {
   console.log("  deployed");
 } else console.log("  already deployed");
 
-console.log("6. Example contract that receives the swarm's answer");
+console.log("7. Example contract that receives the swarm's answer");
 const asker = `asker.${ROOT}`;
 await subAccount(asker, 0.08);
 if (!(await isDeployed(asker))) {

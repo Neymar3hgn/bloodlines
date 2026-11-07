@@ -273,6 +273,98 @@ if (await exists(asker)) {
   check("R21", "an outsider cannot open a sealed question, and is refunded", (await c.creditsOf(a)) === before);
 }
 
+// ---------- Attacks found in review ----------
+{
+  const askAs = async (who: string, ask: object, amount: bigint) => {
+    const s = await currentSalt(verifier);
+    await executeIntents(keeper, verifier, [signIntents(who, verifier, s, [transferIntent(colony, tokenId, amount, JSON.stringify({ ask }), "20000000000000")])]);
+    await c.sleep(3000);
+  };
+
+  // The worst one: a question that names an agent's `die` method. If the colony
+  // made this call itself, the agent would obey and the attacker would inherit.
+  const victim = b;
+  const attacker = a;
+  const victimBefore = await c.creditsOf(victim);
+  const attackerBefore = await c.creditsOf(attacker);
+  const statsBefore = await c.getStats();
+  await askAs(
+    attacker,
+    {
+      text: `Attack test ${tag}`,
+      category: "test",
+      source: null,
+      resolver: { OnChain: { contract: victim, method: "die", args: `${attacker}\n${attacker}`, after_ms: 0, at_least: "0" } },
+      commit_secs: 8,
+      reveal_secs: 25,
+      wait_secs: 0,
+      callback: null,
+    },
+    20_000n,
+  );
+  const qa = statsBefore.questions;
+  const p1 = plan(a, 30, 3n);
+  const p2 = plan(b, 70, 3n);
+  await Promise.all([c.commit(qa, p1), c.commit(qa, p2)]);
+  await c.waitForRevealWindow(qa);
+  await c.revealBatch(qa, [p1, p2]);
+  await c.sleep(2500);
+  await c.clear(qa);
+  await c.resolveOnchain(qa).catch(() => null);
+  await c.sleep(6000);
+  const victimAlive = await exists(victim);
+  check("R21", "an asker cannot make the colony kill an agent", victimAlive && (await c.getAgent(victim)).status === "Alive", "the reader has no authority");
+  check("R21", "an asker cannot steal an agent's money", (await c.creditsOf(attacker)) < attackerBefore + victimBefore / 2n);
+
+  // R25: if no result ever comes, the money still comes back.
+  const qe = await c.openQuestion({ text: `Expiry test ${tag}`, category: "test", resolver: "Public", commitSecs: 8, revealSecs: 25, waitSecs: 2, bounty: 30_000n });
+  const e1 = plan(a, 20, 5n);
+  const e2 = plan(b, 80, 5n);
+  await Promise.all([c.commit(qe, e1), c.commit(qe, e2)]);
+  await c.waitForRevealWindow(qe);
+  await c.revealBatch(qe, [e1, e2]);
+  await c.sleep(2500);
+  await c.clear(qe);
+  await c.sweep([a, b]);
+  await c.sleep(3500);
+  const waiting = await c.getQuestion(qe);
+  const left = waiting.expires_ms - Date.now();
+  if (left > 0) await c.sleep(left + 1500);
+  const keeperBefore = await c.creditsOf(keeper);
+  const aBefore = await c.creditsOf(a);
+  await c.expire(qe);
+  await c.settle(qe);
+  await c.sweep([a, b, keeper]);
+  await c.sleep(4000);
+  const voided = await c.getOrders(qe);
+  const costBack = BigInt(voided.find((o) => o.agent === a).cost);
+  check("R25", "a question with no result can be voided by anyone", (await c.getQuestion(qe)).yes_won === null);
+  check("R25", "agents get their cost back when a question expires", (await c.creditsOf(a)) === aBefore + costBack, String(costBack));
+  check("R25", "the asker gets the bounty back when a question expires", (await c.creditsOf(keeper)) >= keeperBefore + BigInt((await c.getQuestion(qe)).pool));
+
+  // The colony pays for question storage, so askers cannot be allowed to fill it.
+  const before = await c.creditsOf(a);
+  const statsNow = await c.getStats();
+  await askAs(a, { text: "x", category: "c".repeat(5000), source: null, resolver: "Public", commit_secs: 5, reveal_secs: 5, wait_secs: 0, callback: null }, 20_000n);
+  check("R16", "an asker cannot fill the colony's storage, and is refunded", (await c.getStats()).questions === statsNow.questions && (await c.creditsOf(a)) === before);
+
+  // Two births requested together must not both pass the check.
+  await c.grant([d], 5_000_000n);
+  await c.sleep(2500);
+  const twinA = `ta${tag}`;
+  const twinB = `tb${tag}`;
+  const { saveKey, newKey } = await import("../swarm/chain.ts");
+  const keyA = saveKey(`${twinA}.${d}`, newKey());
+  const keyB = saveKey(`${twinB}.${d}`, newKey());
+  const s = await currentSalt(verifier);
+  const auth = (label: string, key: string) => ({ intent: "auth_call", contract_id: colony, msg: JSON.stringify({ spawn: { label, public_key: key, genome: genome(label) } }), min_gas: "130000000000000" });
+  await executeIntents(keeper, verifier, [signIntents(d, verifier, s, [auth(twinA, keyA.public_key), auth(twinB, keyB.public_key)])]).catch(() => null);
+  await c.sleep(9000);
+  const madeA = await exists(`${twinA}.${d}`);
+  const madeB = await exists(`${twinB}.${d}`);
+  check("R12", "two births requested at once cannot both pass the cooldown", Number(madeA) + Number(madeB) <= 1, `${Number(madeA) + Number(madeB)} born`);
+}
+
 const passed = results.filter((r) => r.ok).length;
 console.log(`\n${passed} of ${results.length} checks passed`);
 writeFileSync("data/e2e-report.json", JSON.stringify({ colony, verifier, network: c.deployment.network, at: new Date().toISOString(), passed, total: results.length, results }, null, 1));

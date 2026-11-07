@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["core", "colony", "agent", "tusd", "asker"]
+members = ["core", "colony", "agent", "tusd", "asker", "reader", "clean"]
 
 [workspace.package]
 version = "0.1.0"

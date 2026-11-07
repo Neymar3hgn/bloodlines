@@ -1,0 +1,116 @@
+/*
+ * Colour lives here and nowhere else.
+ *
+ * The lineage inks are a fixed order, one per founder. Neighbouring founders sit
+ * next to each other on the tree, so the order was searched to keep neighbours
+ * apart, in both themes, for normal vision and for red-green colour blindness
+ * (adjacent OKLab distance at least 15 normally, at least 8 under simulation).
+ * Purple and magenta hues are left out on purpose.
+ *
+ * Inks mark identity only. Text always uses --ink, --ink-2 or --ink-3.
+ */
+:root {
+  color-scheme: light dark;
+
+  --paper: #f5efe3;
+  --paper-2: #ece4d3;
+  --ink: #241f18;
+  --ink-2: #544c3f;
+  --ink-3: #6e6555;
+  --rule: #dcd2bd;
+  --rule-2: #b9ab92;
+  --accent: #8c2f1f;
+  --good: #2b6426;
+
+  --lineage-0: #238bb7;
+  --lineage-1: #863d15;
+  --lineage-2: #315393;
+  --lineage-3: #7f4400;
+  --lineage-4: #029394;
+  --lineage-5: #a87525;
+  --lineage-6: #006641;
+  --lineage-7: #b76276;
+  --lineage-8: #795f00;
+  --lineage-9: #5b7fc3;
+  --lineage-10: #359469;
+  --lineage-11: #006c92;
+  --lineage-12: #9a7c1f;
+  --lineage-13: #88373d;
+  --lineage-14: #898427;
+  --lineage-15: #88392b;
+  --lineage-16: #115890;
+  --lineage-17: #579151;
+  --lineage-18: #86364c;
+  --lineage-19: #728b3a;
+  --lineage-20: #4485c0;
+  --lineage-21: #b06f33;
+  --lineage-22: #2b6426;
+  --lineage-23: #b96267;
+  --lineage-24: #495f00;
+  --lineage-25: #b96555;
+  --lineage-26: #656000;
+  --lineage-27: #0990a6;
+  --lineage-28: #b66943;
+  --lineage-29: #039580;
+  --lineage-30: #805400;
+
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-text: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --page: 1240px;
+  --read: 62rem;
+  --gutter: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #111a2b;
+    --paper-2: #19243a;
+    --ink: #ebe5d8;
+    --ink-2: #bdb9ae;
+    --ink-3: #9aa0ad;
+    --rule: #28344d;
+    --rule-2: #44527a;
+    --accent: #e39a80;
+    --good: #8fc39a;
+
+    --lineage-0: #1882ad;
+    --lineage-1: #cc7e59;
+    --lineage-2: #6f94d8;
+    --lineage-3: #c6834a;
+    --lineage-4: #009293;
+    --lineage-5: #9d6c1d;
+    --lineage-6: #4fa97d;
+    --lineage-7: #ad5a6d;
+    --lineage-8: #af913b;
+    --lineage-9: #5376b8;
+    --lineage-10: #2d8b61;
+    --lineage-11: #41a0cc;
+    --lineage-12: #917415;
+    --lineage-13: #cf787b;
+    --lineage-14: #807b1e;
+    --lineage-15: #cf7a69;
+    --lineage-16: #5a9ad5;
+    --lineage-17: #4f8749;
+    --lineage-18: #cd778a;
+    --lineage-19: #6a8232;
+    --lineage-20: #3c7cb5;
+    --lineage-21: #a6662b;
+    --lineage-22: #6ca666;
+    --lineage-23: #af5a5f;
+    --lineage-24: #87a051;
+    --lineage-25: #af5d4d;
+    --lineage-26: #9e9941;
+    --lineage-27: #028aa0;
+    --lineage-28: #ac613c;
+    --lineage-29: #058b77;
+    --lineage-30: #bd8a40;
+  }
+}
+
+@media (min-width: 900px) {
+  :root {
+    --gutter: 32px;
+  }
+}

@@ -45,6 +45,8 @@ export interface QuestionInput {
   revealSecs: number;
   bounty: bigint;
   callback?: string | null;
+  /** R25: seconds to wait for a result before anyone can void the question. */
+  waitSecs?: number;
 }
 
 export const sealOutcome = (yes: boolean) => {
@@ -60,6 +62,12 @@ export function rememberSeal(hash: string, yes: boolean, salt: string) {
   const all = loadSeals();
   all[hash] = { yes, salt };
   writeFileSync(SEALS, JSON.stringify(all));
+}
+
+export function sealFor(id: number, q: any): string {
+  const seal = q.resolver?.Sealed ? loadSeals()[q.resolver.Sealed.hash] : undefined;
+  if (!seal) throw new Error(`no seal saved for question ${id}`);
+  return seal.salt;
 }
 
 /**
@@ -130,6 +138,7 @@ export async function openQuestion(q: QuestionInput): Promise<number> {
       resolver: q.resolver,
       commit_secs: q.commitSecs,
       reveal_secs: q.revealSecs,
+      wait_secs: q.waitSecs ?? 0,
       callback: q.callback ?? null,
     },
   });
@@ -166,6 +175,7 @@ export const clear = (q: number) => call(keeper, colony, "clear", { q }, 200n);
 export const resolveSealed = (q: number, yes: boolean, salt: string) => call(keeper, colony, "resolve_sealed", { q, yes, salt }, 30n);
 export const resolvePublic = (q: number, yes: boolean, evidence: string) => call(keeper, colony, "resolve_public", { q, yes, evidence }, 30n);
 export const resolveOnchain = (q: number) => call(keeper, colony, "resolve_onchain", { q }, 120n);
+export const expire = (q: number) => call(keeper, colony, "expire", { q }, 30n);
 export const settle = (q: number, limit = 50) => call(keeper, colony, "settle", { q, limit }, 280n);
 export const sweep = (accounts: string[]) => call(keeper, colony, "sweep", { accounts }, 280n);
 export const reap = (agent: string) => call(keeper, colony, "reap", { agent }, 250n);

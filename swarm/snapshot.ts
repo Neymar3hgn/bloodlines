@@ -15,6 +15,15 @@ const out = process.argv[2] ?? "web/public/data/snapshot.json";
 const read = <T>(path: string, fallback: T): T => (existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : fallback);
 
 const registry = read<Record<string, any>>(`data/genomes.${network}.${colony}.json`, {});
+const notes = read<Record<string, Record<string, any>>>(`data/notes.${network}.${colony}.json`, {});
+
+/** Keeps what a reader needs, and drops the raw bytes, which stay in the repo for checking. */
+function thoughtsOn(id: number) {
+  const rows = notes[id] ?? {};
+  return Object.fromEntries(
+    Object.entries(rows).map(([agent, n]) => [agent, { probability: n.probability, reasoning: n.reasoning ?? null, model: n.model ?? null, signed: n.tee?.verified ?? false, signer: n.tee?.signer ?? null }]),
+  );
+}
 
 async function allAgents() {
   const rows: [string, any][] = [];
@@ -42,8 +51,10 @@ const credits = await inPool(agents, 3, ([id, a]) => (a.status === "Dead" ? Prom
 const reputations = await inPool(agents, 3, ([id]) => c.getReputation(id));
 const orders = await inPool(questions, 3, (q) => (q.reveals > 0 ? c.getOrders(q.id) : Promise.resolve([])));
 
+const anyAi = Object.values(notes).some((rows) => Object.values(rows).some((n) => n.reasoning));
 const snapshot = {
   generated: new Date().toISOString(),
+  mode: anyAi ? "ai" : "scripted",
   network,
   colony,
   keeper,
@@ -61,7 +72,7 @@ const snapshot = {
     genome: registry[id]?.genome ?? null,
     label: id.split(".")[0],
   })),
-  questions: questions.map((q, i) => ({ ...q, orders: orders[i] })),
+  questions: questions.map((q, i) => ({ ...q, orders: orders[i], thoughts: thoughtsOn(q.id) })),
   e2e: read("data/e2e-report.json", null),
   sim: read("data/sim-report.json", null),
   experiment: read("data/experiment.json", null),

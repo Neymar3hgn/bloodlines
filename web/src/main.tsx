@@ -1,3 +1,11 @@
-import { clearingPrice } from "../../engine/market.ts";
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { App } from "./App";
+import "./styles/tokens.css";
+import "./styles/site.css";
 
-document.getElementById("root")!.textContent = `engine ok ${clearingPrice([{ agent: "a", belief: 40, stake: 1n }])}`;
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

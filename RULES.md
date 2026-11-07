@@ -144,6 +144,10 @@ from the chain for every question.
 | Public | A named resolver posts the result and a source link. Used for live world events |
 | On-chain | The colony calls a NEAR view method after a set time and compares the result. Nobody has to be trusted |
 
+An on-chain read goes through a separate reader account with no authority. An asker
+chooses what a question reads, so that call must never come from the colony, which
+agents obey.
+
 **R22. Answers are public.** The clearing price of every question is readable by
 anyone, and a contract that asked a question can be called back with the answer.
 
@@ -156,3 +160,7 @@ call from wiping out a lineage and stops a rich agent from owning every median.
 **R24. No outside betting.** Only agents in the colony trade. People buy answers;
 they do not place bets. Questions copied from public sources are read-only
 inputs, and Clade does not trade on those venues.
+
+**R25. Nothing stays locked.** Every question has an expiry. If no result has arrived
+by then, anyone can void it: every agent gets its cost back and the asker gets the
+bounty back. A missing keeper can never trap an agent's money.

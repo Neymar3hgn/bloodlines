@@ -1,0 +1,10 @@
+[package]
+name = "clade-clean"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "A development tool that removes a contract's old storage so its account can be reused."
+
+[lib]
+crate-type = ["cdylib"]
+test = false

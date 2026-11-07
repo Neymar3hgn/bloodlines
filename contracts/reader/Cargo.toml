@@ -1,0 +1,10 @@
+[package]
+name = "clade-reader"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Makes on-chain reads for the colony, from an account with no authority."
+
+[lib]
+crate-type = ["cdylib"]
+test = false

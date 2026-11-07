@@ -12,6 +12,15 @@ import type { Genome } from "./genome.ts";
 const BASE = process.env.NEARAI_URL ?? "https://cloud-api.near.ai/v1";
 const KEY = process.env.NEARAI_API_KEY ?? "";
 const CACHE = "data/llm";
+/** Forecasts are short, but thinking models spend tokens before they answer. */
+const MAX_TOKENS = 1200;
+
+/** A bad key or empty balance. Every later call would fail too, so a run must stop, not skip. */
+export class AccountProblem extends Error {
+  constructor(status: number) {
+    super(status === 402 ? "NEAR AI credit has run out" : "the NEAR AI key was refused");
+  }
+}
 
 export interface Tee {
   id: string;
@@ -22,8 +31,19 @@ export interface Tee {
   signature: string;
   signer: string;
   kind: string;
-  /** True when the recovered signer and both hashes checked out on this machine. */
+  /** True when both hashes match, the signature recovers to the signer, and that signer was attested first. */
   verified: boolean;
+  /** True when the signer appeared in the enclave report fetched before the call. */
+  attested: boolean;
+}
+
+export interface Attestation {
+  model: string;
+  nonce: string;
+  fetched: string;
+  signers: string[];
+  /** Hash of each Intel quote. The quote itself is not verified here: see the README. */
+  quotes: string[];
 }
 
 export interface Reply {
@@ -36,6 +56,9 @@ export interface Reply {
   /** Real cost in micro-dollars, which is also credit units. */
   cost: number;
   tee: Tee | null;
+  /** The exact bytes sent and received, so anyone can recompute the signed hashes. */
+  rawRequest: string;
+  rawResponse: string;
 }
 
 const sha256 = (data: string | Buffer) => createHash("sha256").update(data).digest("hex");
@@ -65,7 +88,12 @@ let prices: Map<string, Price> | null = null;
 /** Live prices, in dollars per token, from the public model list. */
 export async function modelPrices(): Promise<Map<string, Price>> {
   if (prices) return prices;
-  const res = await fetch(`${BASE}/model/list`);
+  let res: Response | null = null;
+  for (let attempt = 1; attempt <= 4 && !res?.ok; attempt++) {
+    res = await fetch(`${BASE}/model/list`).catch(() => null);
+    if (!res?.ok) await new Promise((r) => setTimeout(r, Number(process.env.NEARAI_BACKOFF_MS ?? 1000) * attempt));
+  }
+  if (!res?.ok) throw new Error("could not read the model list");
   const body = (await res.json()) as { models: any[] };
   const dollars = (c: any) => (c ? c.amount / 10 ** c.scale : 0);
   prices = new Map(
@@ -77,6 +105,45 @@ export async function modelPrices(): Promise<Map<string, Price>> {
   return prices;
 }
 
+const attestations = new Map<string, Promise<Attestation | null>>();
+
+/**
+ * NEAR AI's docs say to fetch the enclave report before the completion, with a
+ * fresh nonce, and to match the answer's signer against it afterwards. A report
+ * fetched after the call proves less, so this runs once per model, up front.
+ */
+export function attestation(model: string): Promise<Attestation | null> {
+  const known = attestations.get(model);
+  if (known) return known;
+  const task = (async () => {
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      const nonce = randomBytes(32).toString("hex");
+      const url = `${BASE}/attestation/report?model=${encodeURIComponent(model)}&provider=near&signing_algo=ecdsa&nonce=${nonce}`;
+      const res = await fetch(url, { headers: { authorization: `Bearer ${KEY}`, accept: "application/json", "x-no-aliasing": "true" } }).catch(() => null);
+      if (res?.ok) {
+        const body = (await res.json()) as any;
+        const reports: any[] = body.model_attestations ?? [];
+        if (!reports.length) return null;
+        return {
+          model,
+          nonce,
+          fetched: new Date().toISOString(),
+          signers: reports.map((r) => String(r.signing_address).toLowerCase()),
+          quotes: reports.map((r) => sha256(String(r.intel_quote ?? ""))),
+        };
+      }
+      await new Promise((r) => setTimeout(r, Number(process.env.NEARAI_BACKOFF_MS ?? 1000) * attempt));
+    }
+    return null;
+  })();
+  // A failure is not remembered: one network blip must not unverify a whole model.
+  attestations.set(model, task);
+  task.then((report) => {
+    if (!report) attestations.delete(model);
+  });
+  return task;
+}
+
 async function signatureFor(id: string, model: string, requestHash: string, responseHash: string): Promise<Tee | null> {
   for (let attempt = 1; attempt <= 4; attempt++) {
     const res = await fetch(`${BASE}/signature/${encodeURIComponent(id)}?model=${encodeURIComponent(model)}&signing_algo=ecdsa`, {
@@ -84,14 +151,18 @@ async function signatureFor(id: string, model: string, requestHash: string, resp
     }).catch(() => null);
     if (res?.ok) {
       const d = (await res.json()) as any;
-      if (!d.signature || !d.text) return null;
+      // A successful response carrying an error code means "unavailable", not a signature.
+      if (d.error_code || !d.signature || !d.text) return null;
       const want = d.signature_kind === "gateway" ? `${requestHash}:${responseHash}` : `${model}:${requestHash}:${responseHash}`;
+      const claimed = String(d.signing_address).toLowerCase();
       let signer = "";
       try {
         signer = eip191Signer(d.text, d.signature);
       } catch {
         /* left empty, so verified stays false */
       }
+      const report = await attestation(model);
+      const attested = report?.signers.includes(claimed) ?? false;
       return {
         id,
         model,
@@ -99,9 +170,10 @@ async function signatureFor(id: string, model: string, requestHash: string, resp
         response_hash: responseHash,
         text: d.text,
         signature: d.signature,
-        signer: String(d.signing_address).toLowerCase(),
+        signer: claimed,
         kind: d.signature_kind ?? "unknown",
-        verified: d.text === want && signer === String(d.signing_address).toLowerCase(),
+        attested,
+        verified: d.text === want && signer === claimed && attested,
       };
     }
     await new Promise((r) => setTimeout(r, 800 * attempt));
@@ -109,11 +181,25 @@ async function signatureFor(id: string, model: string, requestHash: string, resp
   return null;
 }
 
-export async function complete(model: string, system: string, user: string, temperature: number, maxTokens = 500): Promise<Reply> {
+function requestBody(model: string, system: string, user: string, temperature: number | null, maxTokens: number): string {
+  return JSON.stringify({
+    model,
+    ...(temperature === null ? {} : { temperature }),
+    max_tokens: maxTokens,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+  });
+}
+
+export async function complete(model: string, system: string, user: string, temperature: number, maxTokens = MAX_TOKENS): Promise<Reply> {
   if (!KEY) throw new Error("NEARAI_API_KEY is not set");
   const price = (await modelPrices()).get(model);
+  if (price?.verifiable) await attestation(model);
   // Build the body once. The signature covers these exact bytes.
-  const body = JSON.stringify({ model, temperature, max_tokens: maxTokens, messages: [{ role: "system", content: system }, { role: "user", content: user }] });
+  let body = requestBody(model, system, user, temperature, maxTokens);
+  let triedWithoutTemperature = false;
   for (let attempt = 1; ; attempt++) {
     const res = await fetch(`${BASE}/chat/completions`, {
       method: "POST",
@@ -133,13 +219,23 @@ export async function complete(model: string, system: string, user: string, temp
       const tokensOut = usage.completion_tokens ?? 0;
       const cost = price ? (tokensIn * price.input + tokensOut * price.output) * 1e6 : 0;
       const tee = price?.verifiable ? await signatureFor(parsed.id, model, sha256(body), sha256(raw)) : null;
-      return { model, system, user, content: parsed.choices?.[0]?.message?.content ?? "", tokensIn, tokensOut, cost, tee };
+      const message = parsed.choices?.[0]?.message ?? {};
+      // Some thinking models put the answer in a reasoning field when they run out of room.
+      const content = message.content || message.reasoning_content || message.reasoning || "";
+      return { model, system, user, content, tokensIn, tokensOut, cost, tee, rawRequest: body, rawResponse: raw.toString("utf8") };
     }
     const status = res?.status ?? 0;
-    if (attempt >= 6 || status === 401 || status === 402 || status === 400) {
+    // Some models refuse a temperature. That is a choice of ours, not a real failure.
+    if (status === 400 && !triedWithoutTemperature) {
+      triedWithoutTemperature = true;
+      body = requestBody(model, system, user, null, maxTokens);
+      continue;
+    }
+    if (status === 401 || status === 402) throw new AccountProblem(status);
+    if (attempt >= 6 || status === 400) {
       throw new Error(`model call failed with ${status}: ${res ? (await res.text()).slice(0, 200) : "no response"}`);
     }
-    await new Promise((r) => setTimeout(r, 1000 * attempt * attempt));
+    await new Promise((r) => setTimeout(r, Number(process.env.NEARAI_BACKOFF_MS ?? 1000) * attempt * attempt));
   }
 }
 
@@ -165,22 +261,31 @@ const SYSTEM = (strategy: string) =>
 export const questionPrompt = (q: QuestionText) =>
   `${q.asOf ? `Today is ${q.asOf}.\n` : ""}Question: ${q.text}\n${q.detail ? `Details: ${q.detail}\n` : ""}What is the probability that the answer is YES?`;
 
-/** Pulls the first probability out of a reply, tolerating code fences and stray text. */
-export function parseForecast(content: string): { probability: number; reasoning: string } | null {
-  const match = content.match(/\{[\s\S]*\}/);
-  if (match) {
+/** Removes a model's private reasoning, which some models return inside the answer. */
+const withoutThinking = (s: string) => s.replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/<think>[\s\S]*$/i, "").trim();
+
+/** The prompt asks for 0 to 100. A value strictly between 0 and 1 can only be a fraction. */
+function toProbability(n: number): number | null {
+  if (!Number.isFinite(n) || n < 0 || n > 100) return null;
+  return n > 0 && n < 1 ? n : n / 100;
+}
+
+/** Reads a probability from a reply, tolerating code fences and stray text. Returns null if there is none. */
+export function parseForecast(raw: string): { probability: number; reasoning: string } | null {
+  const content = withoutThinking(raw);
+  for (const block of content.match(/\{[^{}]*"probability"[^{}]*\}/g) ?? []) {
     try {
-      const j = JSON.parse(match[0]);
-      const n = Number(j.probability);
-      if (Number.isFinite(n)) return { probability: (n > 1 ? n / 100 : n <= 1 && n >= 0 ? n : NaN) || (n === 0 ? 0 : NaN), reasoning: String(j.reasoning ?? "").slice(0, 400) };
+      const j = JSON.parse(block);
+      const probability = toProbability(Number(j.probability));
+      if (probability !== null) return { probability, reasoning: String(j.reasoning ?? "").slice(0, 400) };
     } catch {
-      /* fall through to the plain pattern */
+      /* try the next block, then the plain pattern */
     }
   }
-  const loose = content.match(/probability"?\s*[:=]\s*(\d+(\.\d+)?)/i);
+  const loose = content.match(/probability"?\s*[:=]\s*"?(\d+(\.\d+)?)/i);
   if (loose) {
-    const n = Number(loose[1]);
-    return { probability: n > 1 ? n / 100 : n, reasoning: "" };
+    const probability = toProbability(Number(loose[1]));
+    if (probability !== null) return { probability, reasoning: "" };
   }
   return null;
 }
@@ -198,8 +303,8 @@ export async function forecast(g: Genome, q: QuestionText): Promise<Forecast | n
 export async function rewriteStrategy(parent: Genome, record: string): Promise<{ strategy: string; reply: Reply }> {
   const system = "You improve forecasting strategies. Reply with the new strategy only: plain text, under 60 words, no preamble.";
   const user = `Here is a forecaster's strategy:\n${parent.strategy}\n\nHere are its recent results (its probability, then what happened):\n${record}\n\nWrite an improved version. Keep what worked and fix the pattern behind the losses.`;
-  const reply = await complete(parent.model, system, user, 0.7, 180);
-  const strategy = reply.content.replace(/\s+/g, " ").trim().slice(0, 420);
+  const reply = await complete(parent.model, system, user, 0.7);
+  const strategy = withoutThinking(reply.content).replace(/\s+/g, " ").trim().slice(0, 420);
   return { strategy: strategy || parent.strategy, reply };
 }
 

@@ -158,6 +158,10 @@ name = "clade-asker"
 version = "0.1.0"
 
 [[package]]
+name = "clade-clean"
+version = "0.1.0"
+
+[[package]]
 name = "clade-colony"
 version = "0.1.0"
 dependencies = [
@@ -167,6 +171,10 @@ dependencies = [
 
 [[package]]
 name = "clade-core"
+version = "0.1.0"
+
+[[package]]
+name = "clade-reader"
 version = "0.1.0"
 
 [[package]]
