@@ -13,7 +13,7 @@ import * as c from "./colony.ts";
 import { categorize } from "./questions.ts";
 import { colonyConfig, defaults, ensureFounders, finishRound, fundFounders, playRound, refuel, selection } from "./runner.ts";
 
-const API = "https://gamma-api.polymarket.com/markets";
+const API = process.env.CLADE_LIVE_API ?? "https://gamma-api.polymarket.com/markets";
 const STORE = `data/live.${c.deployment.network}.${c.deployment.colony}.json`;
 
 const arg = (name: string, dflt: string) => {

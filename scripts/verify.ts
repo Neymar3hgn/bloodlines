@@ -5,12 +5,17 @@
  *   node scripts/verify.ts                 reads data/deployment.testnet.json
  *   node scripts/verify.ts s1.clade.testnet    any colony
  */
-import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import { clear, lockFor, settle } from "../engine/market.ts";
+import { eip191Signer } from "../swarm/llm.ts";
 
 const RPC = process.env.CLADE_RPC ?? "https://rpc.testnet.fastnear.com";
-const deployment = JSON.parse(readFileSync("data/deployment.testnet.json", "utf8"));
+const deployment = JSON.parse(readFileSync(process.env.CLADE_DEPLOYMENT ?? "data/deployment.testnet.json", "utf8"));
 const colony = process.argv[2] ?? deployment.colony;
+const notesFile = `data/notes.testnet.${colony}.json`;
+const notes: Record<string, Record<string, any>> = existsSync(notesFile) ? JSON.parse(readFileSync(notesFile, "utf8")) : {};
+const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 
 const results: { name: string; ok: boolean; detail?: string }[] = [];
 const check = (name: string, ok: boolean, detail = "") => results.push({ name, ok, detail });
@@ -132,6 +137,25 @@ for (const q of questions) {
 check("Clearing prices rebuilt from revealed orders", priceOk === priced, `${priceOk} of ${priced}`);
 check("Money in equals money out on every settled question", moneyOk === moneyChecked, `${moneyOk} of ${moneyChecked}`);
 check("Every payout and reward recomputed", payoutOk === payoutChecked, `${payoutOk} of ${payoutChecked}`);
+
+// Real forecasts: the saved answer must hash to what the agent put on chain, and the
+// model's signature over that hash must recover to the signer the enclave named.
+let receipts = 0;
+let receiptsOk = 0;
+for (const q of questions) {
+  const rows = notes[q.id];
+  if (!rows || q.reveals === 0) continue;
+  for (const o of await view<any[]>(colony, "get_orders", { q: q.id })) {
+    const n = rows[o.agent];
+    if (!n?.tee) continue;
+    receipts += 1;
+    const hashes = sha256(n.response) === n.tee.response_hash && sha256(n.request) === n.tee.request_hash && o.receipt === n.tee.response_hash;
+    const text = `${n.tee.model}:${n.tee.request_hash}:${n.tee.response_hash}`;
+    if (hashes && n.tee.text === text && eip191Signer(text, n.tee.signature) === n.tee.signer) receiptsOk += 1;
+    else console.log(`  question ${q.id}, ${o.agent}: the receipt does not check out`);
+  }
+}
+if (receipts > 0) check("Every signed answer matches its receipt on chain", receiptsOk === receipts, `${receiptsOk} of ${receipts}`);
 
 let namesOk = 0;
 let parentsOk = 0;
