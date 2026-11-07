@@ -1,0 +1,13 @@
+[package]
+name = "clade-tusd"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "A test stablecoin for running Clade on testnet."
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = { workspace = true }
+near-contract-standards = { workspace = true }

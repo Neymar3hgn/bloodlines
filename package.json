@@ -5,10 +5,17 @@
   "type": "module",
   "description": "An AI swarm that has to earn its next generation. Built at NEAR HACKATHON.",
   "license": "MIT",
-  "engines": { "node": ">=22.18" },
+  "engines": {
+    "node": ">=22.18"
+  },
   "scripts": {
     "test": "node --test engine/*.test.ts sim/*.test.ts",
     "sim": "node sim/run.ts",
     "vectors": "node scripts/make-vectors.ts"
+  },
+  "dependencies": {
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
+    "near-api-js": "^7.4.0"
   }
 }

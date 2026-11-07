@@ -1,0 +1,10 @@
+[package]
+name = "clade-agent"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "The tiny contract every Clade agent runs: it can have children and it can die."
+
+[lib]
+crate-type = ["cdylib"]
+test = false

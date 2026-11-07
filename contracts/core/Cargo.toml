@@ -1,0 +1,9 @@
+[package]
+name = "clade-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "The Clade market rules, with no blockchain dependencies so they can be tested natively."
+
+[lib]
+path = "src/lib.rs"
