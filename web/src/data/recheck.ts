@@ -4,10 +4,10 @@
  * against. If the chain cannot be reached, the snapshot's copy is checked instead,
  * and the page says which source each question used.
  */
-import { checkConservation, clear, lockFor, settle, type Order as EngineOrder, type Side } from "../../../engine/market.ts";
+import { checkConservation, clear, lockFor, poolPledge, poolShare, settle, type Order as EngineOrder, type Side } from "../../../engine/market.ts";
 import { big } from "./format";
 import { patientView } from "./live";
-import type { Order, Question, Snapshot } from "./types";
+import type { Order, Question, ResearchPool, Snapshot } from "./types";
 
 export interface Recheck {
   id: number;
@@ -73,6 +73,42 @@ export function recompute(q: Question, orders: Order[]): string[] {
   return problems;
 }
 
+/** R26-R28: did a research pool charge what the rules say? An empty list means yes. */
+export function poolProblems(p: ResearchPool): string[] {
+  const problems: string[] = [];
+  const n = p.buyers.length;
+  const share = poolShare(big(p.price), Math.max(1, n));
+  if (big(p.pledge) !== poolPledge(big(p.price), p.min_buyers)) problems.push("the pool's pledge is not price over minimum buyers");
+  if (p.status === "Bought") {
+    if (n < p.min_buyers) problems.push("the pool bought a briefing with too few buyers");
+    if (big(p.share) !== share) problems.push(`pool share: chain ${p.share}, rebuilt ${share}`);
+    if (!/^[0-9a-f]{64}$/.test(p.briefing_hash ?? "")) problems.push("the pool paid with no briefing hash on chain");
+  }
+  if (p.status === "Failed" && n >= p.min_buyers) problems.push("the pool failed with enough buyers");
+  if (p.status !== "Open" && p.status !== "Closed" && big(p.held) !== 0n) problems.push("a finished pool still holds money");
+  return problems;
+}
+
+/** R28: the published briefing must be the text whose hash went on chain. */
+async function briefingProblems(hash: string | null, text: string | null | undefined): Promise<string[]> {
+  if (!hash || !text || !globalThis.crypto?.subtle) return [];
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return hex === hash ? [] : ["the published briefing does not match its hash on chain"];
+}
+
+async function allPools(snapshot: Snapshot, count: number): Promise<Map<number, ResearchPool> | null> {
+  try {
+    const rows = new Map<number, ResearchPool>();
+    for (let from = 0; from < count; from += 50) {
+      for (const p of await patientView<ResearchPool[]>(snapshot.network, snapshot.colony, "get_pools", { from, limit: 50 })) rows.set(p.q, p);
+    }
+    return rows;
+  } catch {
+    return null;
+  }
+}
+
 async function allQuestions(snapshot: Snapshot): Promise<Question[] | null> {
   try {
     const rows: Question[] = [];
@@ -90,6 +126,7 @@ export async function recheckAll(snapshot: Snapshot, onProgress: (done: number, 
   const fromChain = import.meta.env.DEV && snapshot.fixture ? null : await allQuestions(snapshot);
   const questions = fromChain ?? snapshot.questions;
   const inSnapshot = new Map(snapshot.questions.map((q) => [q.id, q]));
+  const chainPools = fromChain ? await allPools(snapshot, fromChain.length) : null;
   const rows: Recheck[] = new Array(questions.length);
   let next = 0;
   let done = 0;
@@ -108,13 +145,15 @@ export async function recheckAll(snapshot: Snapshot, onProgress: (done: number, 
       const usedChain = orders !== null;
       const book = orders ?? inSnapshot.get(q.id)?.orders ?? [];
       const skipped = q.status === "Open" || (!usedChain && !inSnapshot.has(q.id));
+      const pool = chainPools?.get(q.id) ?? inSnapshot.get(q.id)?.research ?? null;
+      const poolChecks = pool ? [...poolProblems(pool), ...(await briefingProblems(pool.briefing_hash, inSnapshot.get(q.id)?.research?.briefing))] : [];
       const row: Recheck = {
         id: q.id,
         text: q.text,
         source: usedChain ? "chain" : "snapshot",
         price: q.price,
         skipped,
-        problems: skipped ? [] : recompute(q, book),
+        problems: skipped ? [] : [...recompute(q, book), ...poolChecks],
       };
       rows[i] = row;
       done += 1;

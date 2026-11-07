@@ -1,14 +1,16 @@
 import { useMemo, useState } from "react";
 import { BeliefAxis } from "../components/BeliefAxis";
 import { Account, AgentName, Empty, NotFound } from "../components/bits";
-import { big, clock, column, date, exact, plural, signed, six, span, tokenSymbol } from "../data/format";
-import { ledgerOf, net, roundState, SIDE_NAME, type RoundState } from "../data/model";
+import { big, clock, column, date, exact, money, plural, signed, six, span, tokenSymbol } from "../data/format";
+import { ledgerOf, net, roundState, SIDE_NAME, stageLine, type RoundState } from "../data/model";
 import type { Order, Question } from "../data/types";
 import { useModel, useNow, useTitle } from "../hooks";
 import { roundHref } from "../router";
 
 function headline(q: Question, state: RoundState): string {
   switch (state) {
+    case "pooling":
+      return "Agents are buying research.";
     case "sealing":
       return "The bids are sealed.";
     case "revealing":
@@ -24,6 +26,8 @@ function story(q: Question, state: RoundState): string {
   const who = plural(q.reveals, "agent");
   const traded = q.matched > 0 ? `${plural(q.matched, "share")} changed hands.` : "No shares traded, because nobody was on the other side.";
   switch (state) {
+    case "pooling":
+      return `Before anyone seals a bid, agents can pool their money for a research briefing. Bidding opens when the pool closes.`;
     case "sealing":
       return `${plural(q.commits, "agent")} ${q.commits === 1 ? "has" : "have"} committed so far. Nobody can see a number until the commit window closes.`;
     case "revealing":
@@ -38,6 +42,56 @@ function story(q: Question, state: RoundState): string {
       if (q.matched === 0) return `${who} revealed. ${traded} ${q.yes_won ? "It happened." : "It did not happen."}`;
       return `${who} revealed. ${traded} ${q.yes_won ? "It happened, so YES holders were right." : "It did not happen, so NO holders were right."}`;
   }
+}
+
+/** R26-R29: what agents bought together, what each paid, and the text once it can be published. */
+function ResearchPoolSection({ q, now }: { q: Question; now: number }) {
+  const m = useModel();
+  const unit = tokenSymbol(m.snapshot.network);
+  const pool = q.research;
+  if (!pool) return null;
+  const n = pool.buyers.length;
+  const alone = `${money(pool.price)} ${unit}`;
+  const each = `${money(pool.share)} ${unit}`;
+  const story: Record<typeof pool.status, string> = {
+    Open:
+      now < pool.end_ms
+        ? `${n} of the ${pool.min_buyers} agents needed have joined so far. Each pledges ${money(pool.pledge)} ${unit}, the most it could owe. The more agents join, the less each pays.`
+        : `${plural(n, "agent")} joined, and the pool is about to close.`,
+    Closed: `${plural(n, "agent")} joined, so each owes ${each}. That money is held until the briefing's hash is on chain. If it does not arrive before the commit window closes, every buyer gets its money back.`,
+    Bought: `${plural(n, "agent")} split one briefing. Alone, it would have cost any of them ${alone}. Together, each paid ${each}, and got the rest of its pledge back.`,
+    Failed: `Only ${n} of the ${pool.min_buyers} agents needed joined, so nobody bought the briefing and every pledge went back.`,
+    Refunded: `No briefing arrived in time, so every buyer got its money back.`,
+  };
+  return (
+    <section className="block" aria-labelledby="pool-title">
+      <h2 id="pool-title">The research they bought together</h2>
+      <p>{story[pool.status]}</p>
+      {n > 0 && (
+        <ul className="buyers" aria-label="Agents in this pool">
+          {pool.buyers.map((id) => (
+            <li key={id}>
+              <AgentName id={id} />
+            </li>
+          ))}
+        </ul>
+      )}
+      {pool.status === "Bought" && (
+        <>
+          {pool.briefing ? (
+            <blockquote className="briefing">{pool.briefing}</blockquote>
+          ) : (
+            <p className="small soft">Only the buyers read it during the round. The text is published afterwards.</p>
+          )}
+          <p className="small soft">
+            {pool.briefing_model && pool.briefing_model !== "scripted" ? `Written by ${pool.briefing_model}${pool.briefing_signed ? ", signed inside a secure enclave" : ""}. ` : ""}
+            {pool.briefing_model === "scripted" ? "A scripted stand-in, written to test the contracts. " : ""}
+            Its hash went on chain before the agents committed: <code className="hash">{pool.briefing_hash}</code>
+          </p>
+        </>
+      )}
+    </section>
+  );
 }
 
 function SealSection({ q }: { q: Question }) {
@@ -134,6 +188,7 @@ function WhoGotWhat({ q, highlight, onHighlight }: { q: Question; highlight: str
               <tr key={o.agent} className={highlight === o.agent ? "is-on" : undefined} onPointerEnter={() => onHighlight(o.agent)} onPointerLeave={() => onHighlight(null)}>
                 <td data-label="Agent">
                   <AgentName id={o.agent} />
+                  {q.research?.status === "Bought" && q.research.buyers.includes(o.agent) && <span className="tag">briefed</span>}
                 </td>
                 <td className="num mono" data-label="Belief">{o.belief}%</td>
                 <td className="mono" data-label="Side">{o.side === 0 ? "none" : SIDE_NAME[o.side]}</td>
@@ -294,8 +349,8 @@ function RoundNav({ id }: { id: number }) {
 
 export function RoundPage({ id }: { id: number }) {
   const m = useModel();
-  const now = useNow(30_000);
   const q = m.questions.get(id);
+  const now = useNow(q?.status === "Open" ? 1_000 : 30_000);
   useTitle(q ? `Round ${id}` : "Not found");
   const [highlight, setHighlight] = useState<string | null>(null);
 
@@ -318,6 +373,12 @@ export function RoundPage({ id }: { id: number }) {
           {state === "waiting" && <span> Waiting for the result.</span>}
         </p>
         <p className="lede">{story(q, state)}</p>
+        {q.status === "Open" && (
+          <p className="round-now">
+            <span className="live-dot" aria-hidden="true" />
+            {stageLine(q, now)}
+          </p>
+        )}
       </section>
 
       <section className="block round-figure" aria-label="Every agent's belief on this question">
@@ -333,6 +394,7 @@ export function RoundPage({ id }: { id: number }) {
         )}
       </section>
 
+      <ResearchPoolSection q={q} now={now} />
       <WhatTheyThought q={q} highlight={highlight} onHighlight={setHighlight} />
       <SealSection q={q} />
       {q.orders.length > 0 && <WhoGotWhat q={q} highlight={highlight} onHighlight={setHighlight} />}

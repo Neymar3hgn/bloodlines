@@ -7,7 +7,7 @@
  */
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { clear, lockFor, settle } from "../engine/market.ts";
+import { clear, lockFor, poolPledge, poolShare, settle } from "../engine/market.ts";
 import { eip191Signer } from "../swarm/llm.ts";
 
 const RPC = process.env.CLADE_RPC ?? "https://rpc.testnet.fastnear.com";
@@ -15,6 +15,8 @@ const deployment = JSON.parse(readFileSync(process.env.CLADE_DEPLOYMENT ?? "data
 const colony = process.argv[2] ?? deployment.colony;
 const notesFile = `data/notes.testnet.${colony}.json`;
 const notes: Record<string, Record<string, any>> = existsSync(notesFile) ? JSON.parse(readFileSync(notesFile, "utf8")) : {};
+const briefingsFile = `data/briefings.testnet.${colony}.json`;
+const briefings: Record<string, any> = existsSync(briefingsFile) ? JSON.parse(readFileSync(briefingsFile, "utf8")) : {};
 const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");
 
 const results: { name: string; ok: boolean; detail?: string }[] = [];
@@ -156,6 +158,28 @@ for (const q of questions) {
   }
 }
 if (receipts > 0) check("Every signed answer matches its receipt on chain", receiptsOk === receipts, `${receiptsOk} of ${receipts}`);
+
+// R26-R28: every pool charged exactly what the rules say, and every briefing bought
+// is the text whose hash went on chain before agents committed.
+const pools: any[] = [];
+for (let from = 0; from < questions.length; from += 50) pools.push(...(await view<any[]>(colony, "get_pools", { from, limit: 50 })));
+const poolIsRight = (p: any) => {
+  const n = p.buyers.length;
+  const held = BigInt(p.held);
+  if (BigInt(p.pledge) !== poolPledge(BigInt(p.price), p.min_buyers)) return false;
+  if (p.status === "Open") return held === BigInt(p.pledge) * BigInt(n);
+  if (p.status === "Closed") return held === BigInt(p.share) * BigInt(n) && BigInt(p.share) === poolShare(BigInt(p.price), n);
+  if (p.status === "Bought") return held === 0n && n >= p.min_buyers && BigInt(p.share) === poolShare(BigInt(p.price), n) && /^[0-9a-f]{64}$/.test(p.briefing_hash ?? "");
+  if (p.status === "Failed") return held === 0n && n < p.min_buyers;
+  return held === 0n; // Refunded
+};
+const poolsOk = pools.filter(poolIsRight).length;
+if (pools.length) check("Every research pool charged what the rules say", poolsOk === pools.length, `${poolsOk} of ${pools.length}`);
+const bought = pools.filter((p) => p.status === "Bought");
+if (bought.length) {
+  const textsOk = bought.filter((p) => briefings[p.q] && sha256(briefings[p.q].text) === p.briefing_hash).length;
+  check("Every briefing matches the hash put on chain", textsOk === bought.length, `${textsOk} of ${bought.length}`);
+}
 
 let namesOk = 0;
 let parentsOk = 0;

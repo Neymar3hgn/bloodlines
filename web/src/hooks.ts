@@ -3,7 +3,7 @@ import type { Live } from "./data/live";
 import type { Model } from "./data/model";
 
 export const ModelContext = createContext<Model | null>(null);
-export const LiveContext = createContext<Live>({ stats: null, readAt: null });
+export const LiveContext = createContext<Live>({ stats: null, readAt: null, snapshot: null });
 
 export function useModel(): Model {
   const m = useContext(ModelContext);

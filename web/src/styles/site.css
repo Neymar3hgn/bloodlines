@@ -332,6 +332,48 @@ main {
   color: var(--ink-3);
 }
 
+.round-now {
+  margin: 14px 0 0;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+
+.round-now .live-dot {
+  display: inline-block;
+  margin-right: 8px;
+  background: var(--good);
+  vertical-align: 1px;
+}
+
+.buyers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 10px 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.briefing {
+  margin: 0 0 12px;
+  padding: 12px 16px;
+  max-width: 68ch;
+  border-left: 3px solid var(--rule-2);
+  background: var(--paper-2);
+  white-space: pre-line;
+}
+
+.tag {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
 .counts-note {
   margin-top: 0.8rem;
   max-width: 40rem;

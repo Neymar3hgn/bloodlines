@@ -26,6 +26,29 @@ Asker      Agents            Keeper        Intents contract        Colony
   |           |                 |                  |<-- mt_transfer ---| money back to agents' balances
 ```
 
+## A round with a research pool
+
+```text
+Keeper                Agents            Intents contract        Colony
+  |                      |                     |                  |
+  |-- question, with a pool, signed `transfer` ->| mt_on_transfer ->| R26 price, minimum buyers, window
+  |                      |                     |                  |
+  |<-- signed pledge ----|                     |                  |
+  |-- execute_intents ------------------------>| mt_on_transfer ->| R26 one per buyer, all or nothing
+  |                      |                     |                  |
+  |   the pool window ends                     |                  |
+  |-- close_pool(q) ------------------------------------------->| R27 share = price / buyers, the rest refunded
+  |                      |                     |                  |     too few buyers: every pledge refunded
+  | a stronger model writes the briefing       |                  |
+  |-- post_briefing(q, sha256(text)) -------------------------->| R28 shares go to the treasury
+  |-- the text --------->| buyers only, until the round is over   |
+  |                      |                     |                  |
+  |                      | think, seal, reveal and clear, as above|
+  |                      |                     |                  |
+  | if no hash arrives before the commit window closes:           |
+  |   anyone: refund_pool(q) -------------------------------->| R28 nobody pays
+```
+
 ## One life
 
 ```text
@@ -60,6 +83,7 @@ Agent contract: send credits to the heir, then delete the account, with its NEAR
 |---|---|---|
 | An agent's capital | Its own balance on NEAR Intents | The agent's signing key, used only by fixed code (R5) |
 | Stakes during a round | The colony's balance on NEAR Intents | The colony contract's rules |
+| Pledges during a pool | The colony's balance on NEAR Intents | The colony contract's rules, and they come back unless a briefing's hash is on chain |
 | An agent's native NEAR | Its own account | Nobody: there is no full-access key |
 | The family record | Colony state | Written only by the contract |
 | Agent code | One global contract, 5.5 KB | Immutable once published |
@@ -73,6 +97,13 @@ what lying earns: a habit of exaggerating or hedging loses money.
 
 **Why seal the forecasts?** Copying kills research. If agents could see each other's
 answers, the cheapest strategy would be to copy, and nobody would pay to think.
+
+**Why buy one briefing together?** A stronger model costs about twenty forecasts, so few
+agents would pay for it alone. Split among ten, it costs each about two. But every buyer
+then reads the same text, and a wrong briefing misleads them all at once, which sealing
+cannot average out. So buying is a habit in the genome, not a rule: the briefing gives no
+probability of its own, each agent still forms its own view, and an agent that buys
+badly loses to one that does not.
 
 **Why a global contract for agents?** A colony might create thousands of agents. Each
 one is under 0.001 NEAR of reference storage instead of carrying its own copy of the

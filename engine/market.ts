@@ -59,6 +59,14 @@ export interface Settlement {
   dust: bigint;
 }
 
+const divideUp = (a: bigint, b: bigint) => (a + b - 1n) / b;
+
+/** What each buyer pays to join a pool (R26): the most it could ever owe. */
+export const poolPledge = (price: bigint, minBuyers: number) => divideUp(price, BigInt(minBuyers));
+
+/** What each buyer really pays once the pool closes (R27). */
+export const poolShare = (price: bigint, buyers: number) => divideUp(price, BigInt(buyers));
+
 /** Units an agent must lock for an order (R7). */
 export function lockFor(belief: number, stake: bigint): bigint {
   return stake * BigInt(Math.max(belief, 100 - belief)) * POINT_UNITS;

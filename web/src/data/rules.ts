@@ -24,4 +24,9 @@ export const RULE_NAMES: Record<string, string> = {
   R22: "Answers are public",
   R23: "Size limits",
   R24: "No outside betting",
+  R25: "Nothing stays locked",
+  R26: "Agents can buy together",
+  R27: "Each buyer pays only its share",
+  R28: "No briefing, no payment",
+  R29: "A pledge is an open position",
 };

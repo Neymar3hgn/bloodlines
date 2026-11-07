@@ -288,6 +288,7 @@ function otherStates(questions: Question[], r: () => number) {
   const blank = {
     ...last,
     orders: [],
+    thoughts: {},
     commits: 0,
     reveals: 0,
     price: 0,
@@ -312,6 +313,24 @@ function otherStates(questions: Question[], r: () => number) {
     o.reward = "0";
   }
 
+  const bought = questions[questions.length - 5];
+  bought.research = {
+    q: bought.id,
+    price: "80000",
+    min_buyers: 4,
+    pledge: "20000",
+    end_ms: bought.opened_ms + 8_000,
+    buyers: bought.orders.slice(0, 6).map((o) => o.agent),
+    share: "13334",
+    held: "0",
+    status: "Bought",
+    briefing_hash: hex(r),
+    briefing: "Fixture text standing in for a research briefing. It gives a base rate, the strongest evidence each way, and what the answer turns on, so the layout can be checked.",
+    briefing_model: "z-ai/glm-5.3",
+    briefing_signed: true,
+  };
+
+  const buyers = last.orders.slice(0, 3).map((o) => o.agent);
   questions.push(
     { ...blank, id, text: "Fixture: nobody revealed on this one.", status: "Void", commits: 2, opened_ms: base + 60_000, commit_end_ms: base + 90_000, reveal_end_ms: base + 150_000, resolver: hash },
     {
@@ -328,6 +347,27 @@ function otherStates(questions: Question[], r: () => number) {
       reveal_end_ms: base + 290_000,
     },
     { ...blank, id: id + 2, text: "Fixture: still open, bids sealed.", status: "Open", commits: 9, opened_ms: Date.now() - 5_000, commit_end_ms: Date.now() + 600_000, reveal_end_ms: Date.now() + 1_200_000, resolver: "Public", bounty: "80000" },
+    {
+      ...blank,
+      id: id + 3,
+      text: "Fixture: agents are joining a research pool.",
+      status: "Open",
+      opened_ms: Date.now() - 5_000,
+      commit_end_ms: Date.now() + 900_000,
+      reveal_end_ms: Date.now() + 1_200_000,
+      resolver: "Public",
+      bounty: "80000",
+      research: { q: id + 3, price: "80000", min_buyers: 4, pledge: "20000", end_ms: Date.now() + 300_000, buyers, share: "0", held: "60000", status: "Open", briefing_hash: null },
+    },
+    {
+      ...blank,
+      id: id + 4,
+      text: "Fixture: a pool that found too few buyers.",
+      status: "Void",
+      resolver: "Public",
+      bounty: "80000",
+      research: { q: id + 4, price: "80000", min_buyers: 4, pledge: "20000", end_ms: Date.now() - 60_000, buyers: buyers.slice(0, 2), share: "0", held: "0", status: "Failed", briefing_hash: null },
+    },
   );
 }
 

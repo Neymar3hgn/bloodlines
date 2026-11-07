@@ -41,6 +41,8 @@ const MAX_RECEIPT_LEN: usize = 64;
 const MAX_WINDOW_SECS: u64 = 7 * 24 * 3600;
 const MAX_ACCOUNT_LEN: usize = 64;
 const STRIKES_TO_REAP: u8 = 3;
+/// R26: keeps `close_pool` and `refund_pool` well inside one transaction's gas.
+const MAX_BUYERS: usize = 64;
 
 #[ext_contract(ext_verifier)]
 #[allow(dead_code)]
@@ -73,6 +75,7 @@ enum Key {
     Committers,
     Orders,
     Claimable,
+    Pools,
 }
 
 #[near(serializers = [borsh, json])]
@@ -209,6 +212,50 @@ pub struct OrderRec {
     pub payout: U128,
 }
 
+#[near(serializers = [borsh, json])]
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum PoolStatus {
+    /// Agents can join.
+    Open,
+    /// Enough agents joined, and the shares are held until the briefing arrives.
+    Closed,
+    /// R28: the briefing's hash is on chain and the shares were paid.
+    Bought,
+    /// R27: too few agents joined, so everyone got their pledge back.
+    Failed,
+    /// R28: no briefing arrived in time, so everyone got their money back.
+    Refunded,
+}
+
+/// R26: agents buying a research briefing together.
+#[near(serializers = [borsh, json])]
+#[derive(Clone)]
+pub struct Pool {
+    pub q: u64,
+    pub price: U128,
+    pub min_buyers: u32,
+    /// What each buyer pays to join: `price / min_buyers`, rounded up.
+    pub pledge: U128,
+    pub end_ms: u64,
+    pub buyers: Vec<AccountId>,
+    /// R27: what each buyer really pays, set when the pool closes.
+    pub share: U128,
+    /// Money the colony is still holding for this pool.
+    pub held: U128,
+    pub status: PoolStatus,
+    /// R28: hex sha256 of the briefing.
+    pub briefing_hash: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
+pub struct PoolAsk {
+    pub price: U128,
+    pub min_buyers: u32,
+    /// How long agents have to join. The commit window starts after it.
+    pub secs: u64,
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
 pub struct AskMsg {
@@ -223,6 +270,9 @@ pub struct AskMsg {
     #[serde(default)]
     pub wait_secs: u64,
     pub callback: Option<AccountId>,
+    /// R26: offer a shared research briefing on this question.
+    #[serde(default)]
+    pub pool: Option<PoolAsk>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -241,6 +291,7 @@ pub struct RevealMsg {
 pub enum Msg {
     Ask(AskMsg),
     Reveal(RevealMsg),
+    Join { q: u64 },
 }
 
 /// R12: a parent signs this as an intent, so a relayer can pay for the birth.
@@ -272,6 +323,22 @@ pub struct Answer {
 #[near(contract_state)]
 #[derive(PanicOnDefault)]
 pub struct Colony {
+    config: Config,
+    agents: IterableMap<AccountId, AgentRec>,
+    alive: u32,
+    questions: Vector<Question>,
+    commits: LookupMap<(u64, AccountId), [u8; 32]>,
+    committers: LookupMap<(u64, u32), AccountId>,
+    orders: LookupMap<(u64, u32), OrderRec>,
+    claimable: LookupMap<AccountId, u128>,
+    settled_total: u64,
+    founders_open: bool,
+    pools: LookupMap<u64, Pool>,
+}
+
+/// The colony's state before research pools, so a live colony can be upgraded.
+#[near(serializers = [borsh])]
+struct ColonyV1 {
     config: Config,
     agents: IterableMap<AccountId, AgentRec>,
     alive: u32,
@@ -323,6 +390,27 @@ impl Colony {
             claimable: LookupMap::new(Key::Claimable),
             settled_total: 0,
             founders_open: true,
+            pools: LookupMap::new(Key::Pools),
+        }
+    }
+
+    /// Adds research pools to a colony deployed before them.
+    #[private]
+    #[init(ignore_state)]
+    pub fn migrate() -> Self {
+        let old: ColonyV1 = env::state_read().unwrap_or_else(|| env::panic_str("nothing to migrate"));
+        Self {
+            config: old.config,
+            agents: old.agents,
+            alive: old.alive,
+            questions: old.questions,
+            commits: old.commits,
+            committers: old.committers,
+            orders: old.orders,
+            claimable: old.claimable,
+            settled_total: old.settled_total,
+            founders_open: old.founders_open,
+            pools: LookupMap::new(Key::Pools),
         }
     }
 
@@ -511,6 +599,7 @@ impl Colony {
         match serde_json::from_str::<Msg>(&msg).unwrap_or_else(|_| env::panic_str("bad message")) {
             Msg::Ask(ask) => self.handle_ask(sender_id, amount, ask),
             Msg::Reveal(reveal) => self.handle_reveal(sender_id, amount, reveal),
+            Msg::Join { q } => self.handle_join(sender_id, amount, q),
         }
         PromiseOrValue::Value(vec![U128(0)])
     }
@@ -718,6 +807,62 @@ impl Colony {
         self.questions.replace(q as u32, question);
     }
 
+    // ---------- Research pools ----------
+
+    /// R27: anyone can close a pool once its window ends. Each buyer gets back
+    /// what it pledged above its share, or everything if too few joined.
+    pub fn close_pool(&mut self, q: u64) {
+        let mut pool = self.pool(q);
+        require!(pool.status == PoolStatus::Open, "the pool is not open");
+        require!(env::block_timestamp_ms() >= pool.end_ms, "the pool window is still open");
+        let buyers = pool.buyers.len() as u32;
+        if buyers < pool.min_buyers {
+            self.release_buyers(&pool, pool.pledge.0);
+            pool.held = U128(0);
+            pool.status = PoolStatus::Failed;
+        } else {
+            let share = rules::pool_share(pool.price.0, buyers);
+            for agent in &pool.buyers {
+                self.credit(agent, pool.pledge.0 - share);
+            }
+            pool.share = U128(share);
+            pool.held = U128(share * buyers as u128);
+            pool.status = PoolStatus::Closed;
+        }
+        event("pool_close", json!({"q": q, "buyers": buyers, "share": pool.share, "status": pool.status}));
+        self.pools.insert(q, pool);
+    }
+
+    /// R28: the keeper puts the briefing's hash on chain, and only then is it paid for.
+    pub fn post_briefing(&mut self, q: u64, hash: String) {
+        require!(env::predecessor_account_id() == self.config.keeper, "only the keeper");
+        let mut pool = self.pool(q);
+        require!(pool.status == PoolStatus::Closed, "the pool is not waiting for a briefing");
+        require!(env::block_timestamp_ms() < self.question(q).commit_end_ms, "too late for a briefing");
+        parse_hash(&hash);
+        self.release_buyers(&pool, 0);
+        self.credit(&self.config.treasury.clone(), pool.held.0);
+        event("pool_bought", json!({"q": q, "hash": hash, "paid": pool.held}));
+        pool.held = U128(0);
+        pool.status = PoolStatus::Bought;
+        pool.briefing_hash = Some(hash);
+        self.pools.insert(q, pool);
+    }
+
+    /// R28: no briefing before the commit window closed, so nobody pays. Anyone
+    /// can call this, so a missing keeper can never lock a pledge.
+    pub fn refund_pool(&mut self, q: u64) {
+        let mut pool = self.pool(q);
+        require!(matches!(pool.status, PoolStatus::Open | PoolStatus::Closed), "the pool is finished");
+        require!(env::block_timestamp_ms() >= self.question(q).commit_end_ms, "a briefing can still arrive");
+        let each = if pool.status == PoolStatus::Closed { pool.share.0 } else { pool.pledge.0 };
+        self.release_buyers(&pool, each);
+        pool.held = U128(0);
+        pool.status = PoolStatus::Refunded;
+        event("pool_refund", json!({"q": q, "each": U128(each)}));
+        self.pools.insert(q, pool);
+    }
+
     /// Sends what the colony owes to each account's Intents balance. Anyone can call it.
     pub fn sweep(&mut self, accounts: Vec<AccountId>) {
         for account in accounts {
@@ -781,6 +926,16 @@ impl Colony {
     pub fn get_orders(&self, q: u64) -> Vec<OrderRec> {
         let Some(question) = self.questions.get(q as u32) else { return vec![] };
         (0..question.reveals).filter_map(|i| self.orders.get(&(q, i)).cloned()).collect()
+    }
+
+    pub fn get_pool(&self, q: u64) -> Option<Pool> {
+        self.pools.get(&q).cloned()
+    }
+
+    pub fn get_pools(&self, from: u64, limit: u64) -> Vec<Pool> {
+        (from..core::cmp::min(from + limit, self.questions.len() as u64))
+            .filter_map(|q| self.pools.get(&q).cloned())
+            .collect()
     }
 
     /// R22: the swarm's answer to a question, readable by any contract or app.
@@ -859,6 +1014,20 @@ impl Colony {
         self.questions.get(q as u32).cloned().unwrap_or_else(|| env::panic_str("unknown question"))
     }
 
+    fn pool(&self, q: u64) -> Pool {
+        self.pools.get(&q).cloned().unwrap_or_else(|| env::panic_str("this question has no pool"))
+    }
+
+    /// R29: the pool is finished for these buyers, so they can be reaped again.
+    fn release_buyers(&mut self, pool: &Pool, refund: u128) {
+        for agent in &pool.buyers {
+            let mut rec = self.agent(agent);
+            rec.open = rec.open.saturating_sub(1);
+            self.agents.insert(agent.clone(), rec);
+            self.credit(agent, refund);
+        }
+    }
+
     fn claimable_of(&self, id: &AccountId) -> u128 {
         self.claimable.get(id).copied().unwrap_or(0)
     }
@@ -935,8 +1104,17 @@ impl Colony {
         require!(ask.reveal_secs > 0 && ask.reveal_secs <= MAX_WINDOW_SECS, "bad reveal window");
         let longest = self.config.max_wait_secs;
         let wait = if ask.wait_secs == 0 || ask.wait_secs > longest { longest } else { ask.wait_secs } * 1000;
+        if let Some(pool) = &ask.pool {
+            // Only the keeper can deliver a briefing, so only the keeper can offer one.
+            require!(opener == self.config.keeper, "only the keeper can offer a pool");
+            require!(pool.price.0 > 0, "a pool needs a price");
+            require!(pool.min_buyers >= 2 && pool.min_buyers as usize <= MAX_BUYERS, "bad minimum buyers");
+            require!(pool.secs > 0 && pool.secs <= MAX_WINDOW_SECS, "bad pool window");
+        }
         let now = env::block_timestamp_ms();
-        let commit_end_ms = now + ask.commit_secs * 1000;
+        // R26: agents can only think about a briefing once they have it.
+        let pool_ms = ask.pool.as_ref().map_or(0, |p| p.secs * 1000);
+        let commit_end_ms = now + pool_ms + ask.commit_secs * 1000;
         let reveal_end_ms = commit_end_ms + ask.reveal_secs * 1000;
         let mut expires_ms = reveal_end_ms + wait;
         match &ask.resolver {
@@ -954,6 +1132,7 @@ impl Colony {
             }
         }
         let id = self.questions.len() as u64;
+        let pool = ask.pool;
         let question = Question {
             id,
             text: ask.text,
@@ -985,6 +1164,46 @@ impl Colony {
         };
         event("question", json!({"q": id, "text": question.text, "category": question.category, "bounty": question.bounty}));
         self.questions.push(question);
+        if let Some(ask) = pool {
+            let pledge = rules::pool_pledge(ask.price.0, ask.min_buyers);
+            let end_ms = now + pool_ms;
+            event("pool_open", json!({"q": id, "price": ask.price, "min_buyers": ask.min_buyers, "pledge": U128(pledge), "end_ms": end_ms}));
+            self.pools.insert(
+                id,
+                Pool {
+                    q: id,
+                    price: ask.price,
+                    min_buyers: ask.min_buyers,
+                    pledge: U128(pledge),
+                    end_ms,
+                    buyers: vec![],
+                    share: U128(0),
+                    held: U128(0),
+                    status: PoolStatus::Open,
+                    briefing_hash: None,
+                },
+            );
+        }
+    }
+
+    /// R26: an agent joins a pool by paying its pledge.
+    fn handle_join(&mut self, agent: AccountId, amount: u128, q: u64) {
+        let mut rec = self.agent(&agent);
+        let mut pool = self.pool(q);
+        require!(rec.status == Status::Alive, "agent is not alive");
+        require!(pool.status == PoolStatus::Open, "the pool is not open");
+        require!(env::block_timestamp_ms() < pool.end_ms, "the pool window is closed");
+        require!(pool.buyers.len() < MAX_BUYERS, "the pool is full");
+        require!(!pool.buyers.contains(&agent), "already in this pool");
+        require!(amount == pool.pledge.0, "amount must equal the pledge");
+        require!(rec.open < self.config.max_open, "too many open questions");
+        // R29: a pledge is an open position.
+        rec.open += 1;
+        self.agents.insert(agent.clone(), rec);
+        pool.buyers.push(agent.clone());
+        pool.held = U128(pool.held.0 + amount);
+        event("pool_join", json!({"q": q, "agent": agent, "pledge": pool.pledge}));
+        self.pools.insert(q, pool);
     }
 
     fn handle_reveal(&mut self, agent: AccountId, amount: u128, r: RevealMsg) {

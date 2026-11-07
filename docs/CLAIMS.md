@@ -23,13 +23,19 @@ If a claim is in the README, it is here, with how to check it. "On chain" means
 | An asker cannot use that read to attack an agent | `contracts/reader`, R21 | `npm run e2e` runs the attack and checks the agent survives |
 | Nothing stays locked if a result never comes | `expire`, R25 | `npm run e2e` |
 | Two births at once cannot both pass | `require_can_spawn` runs after the balance read | `npm run e2e` sends two transactions at once |
+| Each buyer in a pool pays only its share, and the seller is paid in full | `Colony::close_pool`, R27 | `npm test`: `rule_27`. `cargo test`. `npm run e2e`. `npm run verify` recomputes every pool |
+| No briefing, no payment | `post_briefing`, `refund_pool`, R28 | `npm run e2e`: too late, wrong caller and bad hash are all refused, and anyone can trigger the refund |
+| A pledge cannot be lost to a reap | `handle_join` counts it as an open position, R29 | `npm run e2e` |
+| The briefing published is the one bought | The hash is on chain before agents commit, R28 | `npm run verify`, and Check it yourself on the site, which hashes the text in your browser |
 | A replay reproduces a run exactly, with no key | `swarm/experiment.ts --replay` | `npm test` runs the AI path against a local mock, then replays it |
 | A contract can receive the answer | `on_clade_answer`, R22 | `npm run e2e`, `contracts/asker` |
 | The testnet Intents contract has mainnet's code | Same `code_hash`: `BtA1BEFNS619KkvXFsgcpQ21Tb5yMm32aaUkn7xNothk` | `view_account` on `intents.near` and `verifier.tidepool-sandbox.testnet` |
 | The agent contract is 5.5 KB | `contracts/agent` | `npm run build`, then check `res/clade_agent.wasm` |
 | Selection beats the founders in simulation | `sim/world.ts` | `npm run sim` |
 | Lying is a losing habit in simulation | `sim/gaming.ts` | `npm run sim` |
+| In simulation, a good briefing helps, a bad one hurts, and selection keeps the first habit more than the second | `sim/world.ts`, R26 | `npm run sim`. `npm test`: `rule_26` |
 | Agents evolve better forecasts with real AI | **Not yet shown** | `swarm/experiment.ts` needs a NEAR AI key. It can also report no difference |
+| Real briefings improve real forecasts | **Not yet shown** | `swarm/experiment.ts --pools 60`: the same founders, the same questions, with and without one |
 
 ## What we tested and dropped
 

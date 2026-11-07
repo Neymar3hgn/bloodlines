@@ -43,9 +43,11 @@ function Missing() {
 export function App() {
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const route = useRoute();
-  const snapshot = load.state === "ready" ? load.snapshot : null;
+  const published = load.state === "ready" ? load.snapshot : null;
+  const live = useLive(published);
+  // The chain's newer data, merged over the published file. It is the same object until something changes.
+  const snapshot = live.snapshot ?? published;
   const model = useMemo(() => (snapshot ? buildModel(snapshot) : null), [snapshot]);
-  const live = useLive(snapshot);
 
   const firstRoute = useRef(true);
   useEffect(() => {

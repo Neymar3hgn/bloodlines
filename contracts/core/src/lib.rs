@@ -48,6 +48,20 @@ pub struct Clearing {
     pub matched: u64,
 }
 
+fn divide_up(a: u128, b: u128) -> u128 {
+    (a + b - 1) / b
+}
+
+/// What each buyer pays to join a pool (R26): the most it could ever owe.
+pub fn pool_pledge(price: u128, min_buyers: u32) -> u128 {
+    divide_up(price, min_buyers as u128)
+}
+
+/// What each buyer really pays once the pool closes (R27).
+pub fn pool_share(price: u128, buyers: u32) -> u128 {
+    divide_up(price, buyers as u128)
+}
+
 /// Units an agent must lock for an order (R7).
 pub fn lock_for(belief: u8, stake: u64) -> u128 {
     let top = core::cmp::max(belief, 100 - belief) as u128;
@@ -203,6 +217,26 @@ mod tests {
 
     fn o(belief: u8, stake: u64) -> Order {
         Order { belief, stake }
+    }
+
+    #[test]
+    fn rule_26_a_pledge_covers_the_most_a_buyer_could_owe() {
+        assert_eq!(pool_pledge(120_000, 4), 30_000);
+        assert_eq!(pool_pledge(100_000, 3), 33_334);
+    }
+
+    #[test]
+    fn rule_27_each_buyer_pays_only_its_share() {
+        assert_eq!(pool_share(120_000, 4), 30_000);
+        assert_eq!(pool_share(120_000, 12), 10_000);
+        assert_eq!(pool_share(100_000, 7), 14_286);
+        for min in 2..9u32 {
+            for n in min..33u32 {
+                let price = 12_345u128;
+                assert!(pool_share(price, n) <= pool_pledge(price, min));
+                assert!(pool_share(price, n) * n as u128 >= price);
+            }
+        }
     }
 
     #[test]

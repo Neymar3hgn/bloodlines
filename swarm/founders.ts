@@ -45,5 +45,7 @@ export function founders(models: string[] = MODELS): Genome[] {
     shrink,
     size,
     focus: everything(),
+    // An even spread, in no meaningful order, so selection has something to choose from.
+    pool: (((i * 7) % STRATEGIES.length) + 0.5) / STRATEGIES.length,
   }));
 }

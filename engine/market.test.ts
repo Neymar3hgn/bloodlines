@@ -6,6 +6,8 @@ import {
   clearingPrice,
   edgeOf,
   lockFor,
+  poolPledge,
+  poolShare,
   reputation,
   settle,
   SHARE_UNITS,
@@ -23,6 +25,31 @@ function rng(seed: number) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+
+test("rule_26 a pledge covers the most a buyer could owe", () => {
+  assert.equal(poolPledge(120_000n, 4), 30_000n);
+  assert.equal(poolPledge(100_000n, 3), 33_334n);
+});
+
+test("rule_27 the more agents join, the less each pays", () => {
+  assert.equal(poolShare(120_000n, 4), 30_000n);
+  assert.equal(poolShare(120_000n, 12), 10_000n);
+  assert.equal(poolShare(100_000n, 7), 14_286n);
+});
+
+test("rule_27 a pool always collects the full price, and never more than a pledge from anyone", () => {
+  for (let price = 1n; price < 3000n; price += 37n) {
+    for (let min = 2; min < 9; min++) {
+      const pledge = poolPledge(price, min);
+      for (let n = min; n < 33; n += 3) {
+        const share = poolShare(price, n);
+        assert.ok(share <= pledge, "a share never exceeds the pledge");
+        assert.ok(share * BigInt(n) >= price, "the seller is always paid in full");
+        assert.ok(share * BigInt(n) - price < BigInt(n), "rounding costs each buyer under one unit");
+      }
+    }
+  }
+});
 
 test("rule_07 lock covers the worst case price", () => {
   assert.equal(lockFor(70, 10n), 10n * 70n * 100n);

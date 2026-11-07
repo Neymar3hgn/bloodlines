@@ -18,7 +18,12 @@ export interface Genome {
   size: number;
   /** Chance of taking a question, per category. A low number means the agent saves its bill. */
   focus: Record<string, number>;
+  /** R26: how likely the agent is to join a research pool. Agents born before pools have none. */
+  pool?: number;
 }
+
+/** What an agent with no pool gene does. */
+export const DEFAULT_POOL_GENE = 0.5;
 
 export const CATEGORIES = ["sports", "politics", "world", "economy", "crypto", "tech", "other"];
 
@@ -53,6 +58,12 @@ export function engages(g: Genome, agent: string, questionId: string, category: 
   return h.readUInt32LE(0) / 2 ** 32 < chance;
 }
 
+/** The same stable coin flip, for joining a research pool (R26). */
+export function joins(g: Genome, agent: string, questionId: string): boolean {
+  const h = createHash("sha256").update(`pool:${agent}:${questionId}`).digest();
+  return h.readUInt32LE(0) / 2 ** 32 < (g.pool ?? DEFAULT_POOL_GENE);
+}
+
 export type Rng = () => number;
 
 export function gaussian(r: Rng): number {
@@ -70,6 +81,7 @@ export function mutateNumbers(g: Genome, r: Rng, models: string[]): Genome {
     temperature: clamp(g.temperature + 0.1 * gaussian(r), 0, 1.2),
     shrink: clamp(g.shrink * Math.exp(0.12 * gaussian(r)), 0.35, 1.6),
     size: clamp(g.size * Math.exp(0.15 * gaussian(r)), 0.02, 0.5),
+    pool: clamp((g.pool ?? DEFAULT_POOL_GENE) + 0.08 * gaussian(r), 0, 1),
     focus,
     // A rare mutation moves a lineage to a different model.
     model: r() < 0.08 ? models[Math.floor(r() * models.length)] : g.model,

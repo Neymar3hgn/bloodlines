@@ -13,7 +13,7 @@ const PORT = 8792;
 process.env.NEARAI_URL = `http://127.0.0.1:${PORT}/v1`;
 
 // The client reads its settings on import, so these must be set first.
-const { AccountProblem, attestation, complete, eip191Signer, forecast, parseForecast, rewriteStrategy } = await import("./llm.ts");
+const { AccountProblem, attestation, complete, eip191Signer, forecast, parseForecast, questionPrompt, rewriteStrategy, writeBriefing } = await import("./llm.ts");
 const { founders } = await import("./founders.ts");
 
 const genome = { ...founders()[0], model: "mock/fast" };
@@ -133,6 +133,26 @@ test("a parent rewrites its strategy, without its private reasoning", async () =
   });
 });
 
+test("rule_26 a briefing is plain text with a signed receipt, without private reasoning", async () => {
+  await withMock({ content: "<think>private</think>\nThe base rate is low." }, async () => {
+    const { text, reply } = await writeBriefing(question);
+    assert.equal(text, "The base rate is low.");
+    assert.equal(reply.tee?.verified, true);
+    assert.ok(reply.cost > 0);
+  });
+});
+
+test("rule_26 a briefing with nothing in it is a failure, not an empty purchase", async () => {
+  await withMock({ content: "<think>only this</think>" }, async () => {
+    await assert.rejects(() => writeBriefing(question), /empty/);
+  });
+});
+
+test("rule_26 only an agent given the briefing sees it in its prompt", () => {
+  assert.ok(questionPrompt(question, "The base rate is low.").includes("The base rate is low."));
+  assert.ok(!/briefing/i.test(questionPrompt(question)));
+});
+
 test("rule_05 forecast parsing reads only a number", () => {
   assert.equal(parseForecast('{"probability": 72, "reasoning": "x"}')?.probability, 0.72);
   assert.equal(parseForecast('```json\n{"probability": 8, "reasoning": "x"}\n```')?.probability, 0.08);
@@ -160,7 +180,7 @@ test("the whole experiment runs on the AI path, and a replay needs no model call
   const mock = await startMock(PORT);
   const run = `mock-${process.pid}`;
   const env = { ...process.env, NEARAI_URL: mock.url, NEARAI_API_KEY: "test-key", NEARAI_BACKOFF_MS: "5" };
-  const args = ["swarm/experiment.ts", "--run", run, "--train", "24", "--exam", "10"];
+  const args = ["swarm/experiment.ts", "--run", run, "--train", "24", "--exam", "10", "--pools", "4"];
   try {
     await new Promise<void>((resolve, reject) => {
       import("node:child_process").then(({ execFile }) => {
@@ -174,6 +194,7 @@ test("the whole experiment runs on the AI path, and a replay needs no model call
   const live = JSON.parse(readFileSync(`data/experiment-${run}.json`, "utf8"));
   assert.ok(live.usage.modelCalls > 300, String(live.usage.modelCalls));
   assert.ok(live.usage.signedAnswers > 300, "answers carry verified signatures");
+  assert.equal(live.exam.briefings.questions, 4, "the founders sat four questions again with a briefing");
 
   // The server is gone, so this can only work from the saved answers.
   execFileSync(process.execPath, [...args, "--replay"], { env: { ...env, NEARAI_URL: "http://127.0.0.1:9/v1" } });

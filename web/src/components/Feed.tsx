@@ -1,5 +1,5 @@
 import { AgentName, Empty } from "./bits";
-import { plural, stamp } from "../data/format";
+import { money, plural, stamp, tokenSymbol } from "../data/format";
 import { roundState, type FeedItem } from "../data/model";
 import type { Question } from "../data/types";
 import { useModel, useNow } from "../hooks";
@@ -8,6 +8,7 @@ import { roundHref } from "../router";
 /** One short factual line about where a round stands. */
 function roundLine(q: Question, now: number): string {
   const state = roundState(q, now);
+  if (state === "pooling") return `Open. ${plural(q.research?.buyers.length ?? 0, "agent")} in a research pool so far.`;
   if (state === "sealing") return `Open. ${plural(q.commits, "sealed bid")} so far.`;
   if (state === "revealing") return `Revealing. ${q.reveals} of ${q.commits} bids open.`;
   if (state === "void") return "Void. Nobody revealed a bid.";
@@ -17,7 +18,22 @@ function roundLine(q: Question, now: number): string {
 }
 
 function Row({ item, now }: { item: FeedItem; now: number }) {
+  const m = useModel();
   const when = <time dateTime={Number.isFinite(item.at) ? new Date(item.at).toISOString() : undefined}>{stamp(item.at)}</time>;
+  if (item.kind === "pool") {
+    const q = item.question;
+    const pool = q.research!;
+    const unit = tokenSymbol(m.snapshot.network);
+    return (
+      <li className="feed-pool">
+        {when}
+        <a href={roundHref(q.id)}>{plural(pool.buyers.length, "agent")} bought a briefing together</a>
+        <span className="feed-note">
+          {money(pool.share)} {unit} each, instead of {money(pool.price)} alone.
+        </span>
+      </li>
+    );
+  }
   if (item.kind === "round") {
     const q = item.question;
     return (
@@ -63,7 +79,7 @@ export function Feed({ limit = 12 }: { limit?: number }) {
   return (
     <ol className="feed">
       {items.map((item) => (
-        <Row key={`${item.kind}-${item.kind === "round" ? item.question.id : item.agent.id}`} item={item} now={now} />
+        <Row key={`${item.kind}-${item.kind === "round" || item.kind === "pool" ? item.question.id : item.agent.id}`} item={item} now={now} />
       ))}
     </ol>
   );

@@ -5,7 +5,7 @@
  * answer two questions cheaply: does selection find the better agents, and can
  * the market be gamed?
  */
-import { clear, lockFor, settle, SHARE_UNITS, type Order } from "../engine/market.ts";
+import { clear, lockFor, poolPledge, poolShare, settle, SHARE_UNITS, type Order } from "../engine/market.ts";
 
 export const CREDIT = 1_000_000n;
 
@@ -26,6 +26,15 @@ export interface Params {
   /** Turn selection off to get the control group. */
   selection: boolean;
   seed: number;
+  /** R26: one question in this many offers a shared briefing. Zero turns pools off. */
+  poolEvery: number;
+  poolPrice: bigint;
+  poolMinBuyers: number;
+  /**
+   * The briefing's error, in log odds. Every buyer reads the same text, so when it
+   * is wrong they are all wrong together.
+   */
+  briefingNoise: number;
 }
 
 export const DEFAULTS: Params = {
@@ -43,7 +52,14 @@ export const DEFAULTS: Params = {
   maxStake: 60n,
   selection: true,
   seed: 1,
+  poolEvery: 0,
+  poolPrice: 40_000n,
+  poolMinBuyers: 4,
+  briefingNoise: 0.3,
 };
+
+/** How much a buyer leans on the briefing rather than on its own reading. */
+const BRIEFING_WEIGHT = 0.6;
 
 export interface Genome {
   /** Standard deviation of the agent's reading of the evidence, in log odds. Lower is better. */
@@ -57,6 +73,8 @@ export interface Genome {
    * Language models make correlated mistakes, so averaging alone cannot fix them.
    */
   herd: number;
+  /** R26: how likely the agent is to join a research pool. */
+  pool: number;
 }
 
 export interface Agent {
@@ -92,9 +110,13 @@ export function gauss(r: Rng): number {
   return Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r());
 }
 
-/** `shared` is the same for every agent on a question: the mistake they all tend to make. */
-export function beliefOf(g: Genome, truth: number, shared: number, r: Rng): number {
-  const reading = logit(truth) + g.herd * shared + g.noise * gauss(r);
+/**
+ * `shared` is the same for every agent on a question: the mistake they all tend to
+ * make. `briefing` is what a buyer read, in log odds, and the same for every buyer.
+ */
+export function beliefOf(g: Genome, truth: number, shared: number, r: Rng, briefing: number | null = null): number {
+  const own = logit(truth) + g.herd * shared + g.noise * gauss(r);
+  const reading = briefing === null ? own : (1 - BRIEFING_WEIGHT) * own + BRIEFING_WEIGHT * briefing;
   return clampBelief(logistic(g.confidence * reading));
 }
 
@@ -104,12 +126,14 @@ export function stakeOf(g: Genome, balance: bigint, maxStake: bigint): bigint {
   return shares > maxStake ? maxStake : shares;
 }
 
-function mutate(g: Genome, r: Rng): Genome {
+function mutate(g: Genome, r: Rng, pools: boolean): Genome {
   return {
     noise: Math.max(0.05, g.noise * Math.exp(0.15 * gauss(r))),
     confidence: Math.min(3, Math.max(0.2, g.confidence * Math.exp(0.12 * gauss(r)))),
     size: Math.min(0.3, Math.max(0.01, g.size * Math.exp(0.12 * gauss(r)))),
     herd: Math.min(1.5, Math.max(0, g.herd * Math.exp(0.15 * gauss(r)))),
+    // Only drawn when pools are on, so a run without them replays exactly.
+    pool: pools ? Math.min(1, Math.max(0, g.pool + 0.08 * gauss(r))) : g.pool,
   };
 }
 
@@ -124,6 +148,7 @@ export interface Bucket {
   meanNoise: number;
   meanHerd: number;
   meanConfidence: number;
+  meanPool: number;
   wealth: number;
   maxGen: number;
   births: number;
@@ -138,6 +163,12 @@ export interface Report {
   conservationErrors: number;
   /** Same questions, founders against the final population, stakes frozen. */
   exam: { questions: number; founderError: number; evolvedError: number; evolvedWins: number };
+  /**
+   * R26: pools offered, pools that found enough buyers, and buyers per bought pool.
+   * `withBriefing` and `withoutIt` are the swarm's error on the same bought questions,
+   * with the briefing and with the same agents reading nothing.
+   */
+  pools: { offered: number; bought: number; meanBuyers: number; meanGene: number; withBriefing: number; withoutIt: number };
 }
 
 /** The wealth-weighted answer of a frozen population on one question. */
@@ -152,6 +183,7 @@ function examPrice(pop: { genome: Genome; weight: bigint }[], truth: number, sha
 
 export function runColony(p: Params): Report {
   const r = makeRng(p.seed);
+  const pools = p.poolEvery > 0;
   const agents: Agent[] = [];
   for (let i = 0; i < p.founders; i++) {
     agents.push({
@@ -163,6 +195,7 @@ export function runColony(p: Params): Report {
         confidence: 0.5 + r() * 1.5,
         size: 0.04 + r() * 0.12,
         herd: r() * 1.2,
+        pool: pools ? r() : 0.5,
       },
       balance: p.capital,
       born: 0,
@@ -183,6 +216,11 @@ export function runColony(p: Params): Report {
   const founders = agents.map((a) => ({ genome: a.genome, weight: 30n }));
   const bucketSize = Math.max(1, Math.floor(p.questions / 12));
   let conservationErrors = 0;
+  let offered = 0;
+  let bought = 0;
+  let totalBuyers = 0;
+  let withBriefing = 0;
+  let withoutIt = 0;
 
   for (let q = 0; q < p.questions; q++) {
     // A hidden true chance, spread out so most questions are not coin flips.
@@ -191,12 +229,32 @@ export function runColony(p: Params): Report {
     const shared = 1.0 * gauss(r);
     const live = agents.filter((a) => a.died === null);
 
+    // R26, R27: buyers pay only if enough join, and then only their share.
+    const readers = new Set<string>();
+    let briefing: number | null = null;
+    if (pools && q % p.poolEvery === 0) {
+      offered += 1;
+      const pledge = poolPledge(p.poolPrice, p.poolMinBuyers);
+      const buyers = live.filter((a) => r() < a.genome.pool && a.balance - pledge >= p.floor);
+      if (buyers.length >= p.poolMinBuyers) {
+        const share = poolShare(p.poolPrice, buyers.length);
+        for (const a of buyers) {
+          a.balance -= share;
+          treasury += share;
+          readers.add(a.id);
+        }
+        briefing = logit(truth) + p.briefingNoise * gauss(r);
+        bought += 1;
+        totalBuyers += buyers.length;
+      }
+    }
+
     const orders: Order[] = [];
     const beliefs: number[] = [];
     for (const a of live) {
       const stake = stakeOf(a.genome, a.balance - p.bill, p.maxStake);
       if (stake <= 0n) continue;
-      const belief = beliefOf(a.genome, truth, shared, r);
+      const belief = beliefOf(a.genome, truth, shared, r, readers.has(a.id) ? briefing : null);
       beliefs.push(belief);
       if (lockFor(belief, stake) + p.bill > a.balance) continue;
       orders.push({ agent: a.id, belief, stake });
@@ -218,6 +276,11 @@ export function runColony(p: Params): Report {
     treasury += s.dust;
 
     const byId = new Map(live.map((a) => [a.id, a]));
+    if (briefing !== null) {
+      const alone = orders.map((o) => ({ ...o, belief: beliefOf(byId.get(o.agent)!.genome, truth, shared, r) }));
+      withBriefing += (c.price / 100 - truth) ** 2;
+      withoutIt += (clear(alone).price / 100 - truth) ** 2;
+    }
     for (const row of s.rows) {
       const a = byId.get(row.agent)!;
       const delta = row.pnl + row.reward;
@@ -259,7 +322,7 @@ export function runColony(p: Params): Report {
             id: `${a.id}.${a.children}`,
             parent: a.id,
             gen: a.gen + 1,
-            genome: mutate(a.genome, r),
+            genome: mutate(a.genome, r, pools),
             balance: gift,
             born: q,
             died: null,
@@ -290,6 +353,7 @@ export function runColony(p: Params): Report {
         meanNoise: now.reduce((t, a) => t + a.genome.noise * Number(a.balance), 0) / w,
         meanHerd: now.reduce((t, a) => t + a.genome.herd * Number(a.balance), 0) / w,
         meanConfidence: now.reduce((t, a) => t + a.genome.confidence * Number(a.balance), 0) / w,
+        meanPool: now.reduce((t, a) => t + a.genome.pool * Number(a.balance), 0) / w,
         wealth: w / Number(CREDIT),
         maxGen: Math.max(...now.map((a) => a.gen)),
         births,
@@ -319,6 +383,10 @@ export function runColony(p: Params): Report {
     if (b < a) evolvedWins += 1;
   }
 
+  const left = agents.filter((a) => a.died === null);
+  const leftWealth = left.reduce((t, a) => t + Number(a.balance), 0) || 1;
+  const meanGene = left.reduce((t, a) => t + a.genome.pool * Number(a.balance), 0) / leftWealth;
+
   const params: Report["params"] = {};
   for (const [k, v] of Object.entries(p)) params[k] = typeof v === "bigint" ? v.toString() : v;
   return {
@@ -328,6 +396,7 @@ export function runColony(p: Params): Report {
     treasury,
     conservationErrors,
     exam: { questions: examQuestions, founderError: founderError / examQuestions, evolvedError: evolvedError / examQuestions, evolvedWins },
+    pools: { offered, bought, meanBuyers: totalBuyers / (bought || 1), meanGene, withBriefing: withBriefing / (bought || 1), withoutIt: withoutIt / (bought || 1) },
   };
 }
 

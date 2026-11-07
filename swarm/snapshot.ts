@@ -16,13 +16,22 @@ const read = <T>(path: string, fallback: T): T => (existsSync(path) ? JSON.parse
 
 const registry = read<Record<string, any>>(`data/genomes.${network}.${colony}.json`, {});
 const notes = read<Record<string, Record<string, any>>>(`data/notes.${network}.${colony}.json`, {});
+const briefings = read<Record<string, any>>(`data/briefings.${network}.${colony}.json`, {});
 
 /** Keeps what a reader needs, and drops the raw bytes, which stay in the repo for checking. */
 function thoughtsOn(id: number) {
   const rows = notes[id] ?? {};
   return Object.fromEntries(
-    Object.entries(rows).map(([agent, n]) => [agent, { probability: n.probability, reasoning: n.reasoning ?? null, model: n.model ?? null, signed: n.tee?.verified ?? false, signer: n.tee?.signer ?? null }]),
+    Object.entries(rows).map(([agent, n]) => [agent, { probability: n.probability, reasoning: n.reasoning ?? null, model: n.model ?? null, signed: n.tee?.verified ?? false, signer: n.tee?.signer ?? null, briefed: n.briefed ?? false }]),
   );
+}
+
+/** R28: a pool as the chain has it, plus its briefing once the agents can no longer use it. */
+function researchOn(q: any, pool: any) {
+  if (!pool) return null;
+  const written = briefings[q.id];
+  const published = written && Date.now() > q.commit_end_ms;
+  return { ...pool, briefing: published ? written.text : null, briefing_model: published ? written.model : null, briefing_signed: published ? (written.tee?.verified ?? false) : false };
 }
 
 async function allAgents() {
@@ -45,7 +54,14 @@ async function allQuestions() {
   return rows;
 }
 
-const [config, stats, agents, questions] = await Promise.all([view<any>(colony, "get_config"), c.getStats(), allAgents(), allQuestions()]);
+async function allPools() {
+  const rows: any[] = [];
+  const { questions: count } = await c.getStats();
+  for (let from = 0; from < count; from += 50) rows.push(...(await c.getPools(from, 50)));
+  return new Map(rows.map((p) => [p.q, p]));
+}
+
+const [config, stats, agents, questions, pools] = await Promise.all([view<any>(colony, "get_config"), c.getStats(), allAgents(), allQuestions(), allPools()]);
 
 const credits = await inPool(agents, 3, ([id, a]) => (a.status === "Dead" ? Promise.resolve(0n) : c.creditsOf(id)));
 const reputations = await inPool(agents, 3, ([id]) => c.getReputation(id));
@@ -73,7 +89,7 @@ const snapshot = {
     label: id.split(".")[0],
     death: a.status === "Dead" ? { balance: a.final_credits, heir: a.heir } : null,
   })),
-  questions: questions.map((q, i) => ({ ...q, orders: orders[i], thoughts: thoughtsOn(q.id) })),
+  questions: questions.map((q, i) => ({ ...q, orders: orders[i], thoughts: thoughtsOn(q.id), research: researchOn(q, pools.get(q.id)) })),
   e2e: read("data/e2e-report.json", null),
   sim: read("data/sim-report.json", null),
   experiment: read("data/experiment.json", null),

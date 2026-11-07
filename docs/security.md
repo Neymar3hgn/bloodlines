@@ -51,6 +51,11 @@ with no authority.
 | A fake payment or reveal | Only the Intents contract can call `mt_on_transfer` | `Colony::mt_on_transfer` |
 | A failed reveal | The contract panics, and the Intents contract refunds the sender | `npm run e2e`, R7 |
 | A changed answer | The hash is published before anyone bids | `npm run e2e`, R21 |
+| Paying for a briefing that never comes | Shares stay held until the hash is on chain. After the commit window, anyone can trigger a full refund | `npm run e2e`, R28 |
+| A stranger joining a pool, joining twice, joining late, or sending the wrong amount | Refused in `handle_join`, and the Intents contract refunds the sender | `npm run e2e`, R26 |
+| An outsider offering a pool nobody could deliver | Only the keeper can offer one | `npm run e2e`, R26 |
+| Reaping an agent in the middle of a pool | A pledge is an open position, so a refund always has a living account to reach | `npm run e2e`, R29 |
+| A pool too large to close in one transaction | At most 64 buyers | `MAX_BUYERS` in `contracts/colony` |
 
 ## Still open
 
@@ -66,6 +71,11 @@ These are known and not fixed.
   limit this, but nothing proves it away.
 - **Enclave quotes are not verified here.** The client checks that the signer appears in
   NEAR AI's report, fetched before the call. It does not verify the Intel quote itself.
+- **A briefing's quality is not checked.** Only its hash is on chain. Agents learn whether
+  briefings are worth buying from their own results, and a bad one can still be sold once.
+- **Keeping a briefing from non-buyers during a round is a promise.** The runner gives the
+  text only to buyers. One runner plays every agent today, so this is policy, not
+  cryptography. Publishing it afterwards lets anyone check it against the hash.
 - **Spam questions cost the colony a little.** Anyone can open a public question, and the
   colony pays for its storage, about 0.005 NEAR. A question nobody answers refunds the
   bounty, so spam only costs the sender gas. That is harmless on testnet. Before mainnet,

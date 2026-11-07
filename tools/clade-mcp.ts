@@ -62,6 +62,12 @@ const TOOLS = [
     run: (a: any) => view("get_answer", { q: a.question_id }),
   },
   {
+    name: "clade_pool",
+    description: "The research pool on a question, if it has one: who bought the briefing, the price, and what each agent paid.",
+    inputSchema: { type: "object", properties: { question_id: { type: "number" } }, required: ["question_id"] },
+    run: (a: any) => view("get_pool", { q: a.question_id }),
+  },
+  {
     name: "clade_reputation",
     description: "An agent's reputation. Positive means it beats the swarm on average. A newborn starts from its parent's score, worth five questions of evidence.",
     inputSchema: accountArg,

@@ -6,17 +6,21 @@
 import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { actions } from "near-api-js";
+import { poolPledge } from "../engine/market.ts";
 import { account, exists, inPool, nearBalance, view } from "./chain.ts";
 import * as c from "./colony.ts";
-import { childLabel, engages, gaussian, mutateNumbers, toOrder, type Genome, type Rng } from "./genome.ts";
+import { childLabel, engages, gaussian, joins, mutateNumbers, toOrder, type Genome, type Rng } from "./genome.ts";
 import { founders, MODELS } from "./founders.ts";
-import { AccountProblem, forecast, rewriteStrategy, type QuestionText } from "./llm.ts";
+import { AccountProblem, BRIEFING_MODEL, forecast, rewriteStrategy, writeBriefing, type QuestionText } from "./llm.ts";
 
 const { colony } = c.deployment;
 const billScriptedUnits = 3_000n;
 const reserve = 40_000n;
 export const CAPITAL = 1_000_000n;
 export const BOUNTY = 80_000n;
+/** R26: a briefing's fixed price before bills are scaled: a ceiling on what it costs to write. */
+const BRIEFING_UNITS = 10_000n;
+const MIN_BUYERS = 4;
 
 export interface Settings {
   /** Real forecasts through NEAR AI Cloud, or scripted stand-ins. */
@@ -45,6 +49,10 @@ const saveRegistry = () => writeFileSync(file("genomes"), JSON.stringify(registr
 /** Each agent's reasoning and signed receipt, by question. Lets anyone check a receipt on chain. */
 export const notes: Record<string, Record<string, any>> = load(file("notes"), {});
 const saveNotes = () => writeFileSync(file("notes"), JSON.stringify(notes));
+
+/** R28: each briefing bought, by question. Published after its round, so anyone can check its hash. */
+export const briefings: Record<string, any> = load(file("briefings"), {});
+const saveBriefings = () => writeFileSync(file("briefings"), JSON.stringify(briefings));
 
 /** Each agent's record, used when a parent rewrites its strategy. */
 const journal: Record<string, { text: string; belief: number; yes: boolean }[]> = load(file("journal"), {});
@@ -124,10 +132,13 @@ export interface Thought {
   note: object;
 }
 
-/** A scripted stand-in for a model. `hint` is the truth in a replay, and absent for live questions. */
-function scriptedThought(g: Genome, agent: string, q: QuestionText, hint: boolean | undefined): Thought {
+/**
+ * A scripted stand-in for a model. `hint` is the truth in a replay, and absent for
+ * live questions. A scripted briefing halves the agent's noise.
+ */
+function scriptedThought(g: Genome, agent: string, q: QuestionText, hint: boolean | undefined, briefed: boolean): Thought {
   const skill = 0.4 + (g.temperature < 0.35 ? 0.5 : 0);
-  const reading = (hint === undefined ? 0 : (hint ? 1 : -1) * skill) + 0.9 * gaussian(rng);
+  const reading = (hint === undefined ? 0 : (hint ? 1 : -1) * skill) + (briefed ? 0.45 : 0.9) * gaussian(rng);
   return {
     probability: 1 / (1 + Math.exp(-reading)),
     bill: billScriptedUnits,
@@ -136,9 +147,9 @@ function scriptedThought(g: Genome, agent: string, q: QuestionText, hint: boolea
   };
 }
 
-async function think(r: Living, q: QuestionText, hint: boolean | undefined, s: Settings): Promise<Thought | null> {
-  if (!s.ai) return scriptedThought(r.genome, r.id, q, hint);
-  const f = await forecast(r.genome, q).catch((e) => {
+async function think(r: Living, q: QuestionText, hint: boolean | undefined, s: Settings, briefing?: string): Promise<Thought | null> {
+  if (!s.ai) return scriptedThought(r.genome, r.id, q, hint, briefing !== undefined);
+  const f = await forecast(r.genome, q, briefing).catch((e) => {
     if (e instanceof AccountProblem) throw e;
     console.log(`  ${r.id} could not forecast: ${String(e.message).slice(0, 90)}`);
     return null;
@@ -162,6 +173,73 @@ export interface RoundTiming {
   commitSecs: number;
   revealSecs: number;
   waitSecs?: number;
+  /** R26: seconds agents have to join a research pool. Leave it out for a round with none. */
+  poolSecs?: number;
+}
+
+/**
+ * Joins land through a public RPC too, so this reads who has really joined and
+ * resends the rest. A second join is refused and refunded, so resending is safe.
+ */
+async function joinEveryone(id: number, agents: string[], pledge: bigint, endMs: number, s: Settings) {
+  for (let pass = 0; pass < 4; pass++) {
+    const done = new Set<string>((await c.getPool(id)).buyers);
+    const todo = agents.filter((a) => !done.has(a));
+    if (todo.length === 0 || Date.now() > endMs - 3000) return;
+    for (let i = 0; i < todo.length; i += s.batchSize) {
+      await c.joinBatch(id, todo.slice(i, i + s.batchSize), pledge).catch((e) => console.log(`  a join batch failed: ${String(e.message).slice(0, 100)}`));
+    }
+    await c.sleep(2500);
+  }
+}
+
+async function briefingFor(q: RoundInput, s: Settings) {
+  if (!s.ai) return { text: `A scripted briefing, written for testing. ${q.yes === undefined ? "It has no signal." : `It leans ${q.yes ? "YES" : "NO"}.`}`, model: "scripted", cost: 0, tee: null, request: null, response: null };
+  const { text, reply } = await writeBriefing(q);
+  return { text, model: BRIEFING_MODEL, cost: reply.cost, tee: reply.tee, request: reply.rawRequest, response: reply.rawResponse };
+}
+
+/**
+ * R26-R28: agents pool money for one briefing, which only the buyers read during
+ * the round. Returns the text and who bought it, or null if nothing was bought.
+ */
+async function buyBriefing(id: number, q: RoundInput, agents: Living[], held: Map<string, bigint>, s: Settings) {
+  const pool = await c.getPool(id);
+  const pledge = BigInt(pool.pledge);
+  const wanted = agents.filter((r) => joins(r.genome, r.id, q.id) && (held.get(r.id) ?? 0n) >= pledge + reserve).map((r) => r.id);
+  await joinEveryone(id, wanted, pledge, pool.end_ms, s);
+  const wait = pool.end_ms - Date.now() + 1800;
+  if (wait > 0) await c.sleep(wait);
+  await c.closePool(id);
+  const closed = await c.poolAfter(id, "Open");
+  // A refund waits in the colony until it is swept, so count every pledge as spent.
+  for (const buyer of closed.buyers) held.set(buyer, (held.get(buyer) ?? 0n) - pledge);
+  if (closed.status !== "Closed") {
+    console.log(`  only ${closed.buyers.length} agents wanted the briefing, so all were refunded`);
+    return null;
+  }
+  const written = await briefingFor(q, s).catch((e) => {
+    if (e instanceof AccountProblem) throw e;
+    console.log(`  the briefing could not be written: ${String(e.message).slice(0, 90)}`);
+    return null;
+  });
+  if (!written) return null;
+  const hash = c.sha256Hex(written.text);
+  await c.postBriefing(id, hash).catch((e) => console.log(`  the briefing hash did not land: ${String(e.message).slice(0, 90)}`));
+  const bought = await c.poolAfter(id, "Closed");
+  if (bought.status !== "Bought") return null;
+  briefings[id] = { ...written, hash };
+  saveBriefings();
+  console.log(`  ${closed.buyers.length} agents bought a briefing, ${closed.share} units each instead of ${closed.price}`);
+  return { text: written.text, buyers: new Set<string>(closed.buyers) };
+}
+
+/** R28: whatever a pool still holds goes back, and refunds reach the buyers' own balances. */
+async function finishPool(id: number) {
+  const pool = await c.getPool(id);
+  if (!pool) return;
+  if (pool.status === "Open" || pool.status === "Closed") await c.refundPool(id);
+  for (let i = 0; i < pool.buyers.length; i += 12) await c.sweep(pool.buyers.slice(i, i + 12));
 }
 
 /** Agents think, seal and reveal, and the round clears. Returns the question id. */
@@ -170,36 +248,51 @@ export async function playRound(q: RoundInput, cfg: { max_stake: number }, timin
   const held = await balances(agents.map((r) => r.id));
   const sealed = q.yes === undefined ? null : c.sealOutcome(q.yes);
   if (sealed) c.rememberSeal(sealed.hash, sealed.yes, sealed.salt);
+  const open = (pool?: c.PoolInput) =>
+    c.openQuestion({
+      text: q.text,
+      category: q.category,
+      source: q.source ?? null,
+      resolver: sealed ? { Sealed: { hash: sealed.hash } } : "Public",
+      // Buyers can only think once the briefing exists, so they think inside the window.
+      commitSecs: timing.commitSecs + (pool ? (s.ai ? 300 : 30) : 0),
+      revealSecs: timing.revealSecs,
+      waitSecs: timing.waitSecs,
+      bounty: BOUNTY,
+      pool,
+    });
 
-  // Agents think first, so nothing about their answers exists on chain yet.
+  let id: number | null = null;
+  let briefing: Awaited<ReturnType<typeof buyBriefing>> = null;
+  if (timing.poolSecs) {
+    const price = BRIEFING_UNITS * BigInt(s.billScale);
+    id = await open({ price, minBuyers: MIN_BUYERS, secs: timing.poolSecs });
+    console.log(`Q${id} [${q.category}] ${q.text.slice(0, 72)}, with a research pool`);
+    briefing = await buyBriefing(id, q, agents, held, s);
+  }
+
+  // With no pool, agents think first, so nothing about their answers exists on chain yet.
   const plans: c.OrderPlan[] = [];
   const thoughts: Record<string, object> = {};
   await inPool(agents, 6, async (r) => {
     if (!engages(r.genome, r.id, q.id, q.category)) return;
-    const t = await think(r, q, q.yes, s);
+    const briefed = briefing?.buyers.has(r.id) ?? false;
+    const t = await think(r, q, q.yes, s, briefed ? briefing!.text : undefined);
     if (!t) return;
     const credits = (held.get(r.id) ?? 0n) - t.bill;
     const order = toOrder(r.genome, t.probability, credits, BigInt(cfg.max_stake), reserve);
     if (!order) return;
     plans.push({ agent: r.id, belief: order.belief, stake: order.stake, bill: t.bill, receipt: t.receipt, salt: randomBytes(8).toString("hex") });
-    thoughts[r.id] = { probability: t.probability, ...t.note };
+    thoughts[r.id] = { probability: t.probability, briefed, ...t.note };
   });
-  if (plans.length < 2) {
-    console.log("  fewer than two agents engaged, skipping");
-    return null;
+  if (id === null) {
+    if (plans.length < 2) {
+      console.log("  fewer than two agents engaged, skipping");
+      return null;
+    }
+    id = await open();
+    console.log(`Q${id} [${q.category}] ${q.text.slice(0, 72)}`);
   }
-
-  const id = await c.openQuestion({
-    text: q.text,
-    category: q.category,
-    source: q.source ?? null,
-    resolver: sealed ? { Sealed: { hash: sealed.hash } } : "Public",
-    commitSecs: timing.commitSecs,
-    revealSecs: timing.revealSecs,
-    waitSecs: timing.waitSecs,
-    bounty: BOUNTY,
-  });
-  console.log(`Q${id} [${q.category}] ${q.text.slice(0, 72)}`);
   notes[id] = thoughts;
   saveNotes();
 
@@ -229,6 +322,7 @@ export async function playRound(q: RoundInput, cfg: { max_stake: number }, timin
     await c.sleep(800);
     done = await c.getQuestion(id);
   }
+  await finishPool(id);
   if (done.status === "Void") {
     console.log("  nobody revealed, so the round is void and the bounty goes back");
     await c.sweep([done.opener]);

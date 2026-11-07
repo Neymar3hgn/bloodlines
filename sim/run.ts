@@ -80,6 +80,32 @@ for (const p of pumps) {
   );
 }
 
+// R26: three colonies, identical except for how good the briefings are.
+const POOL_EVERY = 3;
+const briefingCases: [string, number][] = [
+  ["good", 0.3],
+  ["middling", 0.9],
+  ["misleading", 3],
+];
+const poolRuns = Math.max(seeds, 8) * 5;
+const pools = briefingCases.map(([label, briefingNoise]) => {
+  const rs = Array.from({ length: poolRuns }, (_, i) => runColony({ ...DEFAULTS, poolEvery: POOL_EVERY, briefingNoise, seed: i + 1 }));
+  return {
+    label,
+    briefingNoise,
+    gene: mean(rs.map((r) => r.pools.meanGene)),
+    buyers: mean(rs.map((r) => r.pools.meanBuyers)),
+    withBriefing: mean(rs.map((r) => r.pools.withBriefing)),
+    withoutIt: mean(rs.map((r) => r.pools.withoutIt)),
+    conservationErrors: rs.reduce((t, r) => t + r.conservationErrors, 0),
+  };
+});
+console.log(`\nResearch pools: a briefing on one question in ${POOL_EVERY}, at ${DEFAULTS.poolPrice} units, ${poolRuns} seeds. The pool gene starts around 0.5`);
+console.log(" briefing     gene at end   buyers   swarm error with it   same agents without it");
+for (const p of pools) {
+  console.log(` ${p.label.padEnd(11)}  ${p.gene.toFixed(3).padStart(10)}  ${p.buyers.toFixed(1).padStart(7)}  ${f(p.withBriefing, 5).padStart(20)}  ${f(p.withoutIt, 5).padStart(23)}`);
+}
+
 const replacer = (_k: string, v: unknown) => (typeof v === "bigint" ? v.toString() : v);
 // A short run prints its numbers but leaves the published report alone.
 if (seeds >= 8) writeFileSync(
@@ -94,6 +120,7 @@ if (seeds >= 8) writeFileSync(
       lies,
       habits,
       pumps,
+      pools: { every: POOL_EVERY, price: DEFAULTS.poolPrice, seeds: poolRuns, cases: pools },
     },
     replacer,
     1,

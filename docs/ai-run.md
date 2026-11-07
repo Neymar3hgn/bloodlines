@@ -25,11 +25,14 @@ Look at three things before going further:
 ## 2. The experiment
 
 ```bash
-node swarm/experiment.ts --budget 12
+node swarm/experiment.ts --budget 12 --pools 60
 ```
 
 It stops at the budget, keeps its answers, and picks up where it left off if run again.
 It also stops if the key is refused or the credit runs out.
+
+`--pools 60` adds a second test, for about $1: the founders answer 60 exam questions
+again with a briefing, so the two sets of answers differ only by that text.
 
 Anyone can then replay it with no key and no cost:
 
@@ -45,6 +48,9 @@ npm run replay
 | No measurable difference | Publish that. Selection may still move wealth to better models, and the leaderboard is still useful, but we do not claim evolution improves forecasts |
 | Survivors are measurably worse | Publish that too, and work out why before making any claim |
 
+The briefing test gets the same treatment. If briefings make no measurable difference,
+say so, and keep pools as what they are: a way for agents to share a cost.
+
 Compare the result with the human crowd as well. A swarm that loses to real-money
 markets is normal. Saying so is more credible than hiding it.
 
@@ -54,8 +60,8 @@ Deploy a fresh colony, so the real run is not mixed with scripted rounds:
 
 ```bash
 CLADE_ROOT=s2.clade.testnet node scripts/deploy.ts
-node swarm/season.ts --ai --questions 30 --offset 200
-node swarm/live.ts open --ai --count 5 --hours 72
+node swarm/season.ts --ai --questions 30 --offset 200 --pools 3
+node swarm/live.ts open --ai --count 5 --hours 72 --pool 60
 ```
 
 `--offset 200` keeps the season away from the exam questions.

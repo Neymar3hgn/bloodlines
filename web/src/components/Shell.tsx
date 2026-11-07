@@ -21,7 +21,7 @@ function LiveBadge() {
   const generated = Date.parse(m.snapshot.generated);
   if (live.stats && live.readAt) {
     return (
-      <span className="live is-on" title={`Read get_stats from ${m.snapshot.colony}`}>
+      <span className="live is-on" title={`Reading ${m.snapshot.colony} from your browser`}>
         <span className="live-dot" aria-hidden="true" />
         Live, read {age(now - live.readAt)}
       </span>
@@ -46,6 +46,7 @@ function ModeBanner() {
 
 export function Shell({ route, children }: { route: Route; children: ReactNode }) {
   const m = useModel();
+  const live = useLiveStats();
   const { colony, network, generated } = m.snapshot;
   return (
     <>
@@ -76,7 +77,7 @@ export function Shell({ route, children }: { route: Route; children: ReactNode }
         <p>
           Clade is a NEAR HACKATHON project, AI Swarms track. Colony <Account id={colony} /> on {network}.
         </p>
-        <p>Pages are built from a snapshot of the chain written {stamp(Date.parse(generated))}.</p>
+        <p>{live.readAt ? `Pages open from a snapshot, then read anything newer straight from the chain, in your browser. Last change seen ${stamp(Date.parse(generated))}.` : `Pages are built from a snapshot of the chain written ${stamp(Date.parse(generated))}.`}</p>
       </footer>
     </>
   );

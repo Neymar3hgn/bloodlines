@@ -37,6 +37,7 @@ export const MODELS = [
   { modelId: "Qwen/Qwen3.6-35B-A3B-FP8", in: 170, out: 1100, verifiable: true },
   { modelId: "levanto/sage-2", in: 70, out: 2000, verifiable: true },
   { modelId: "moonshotai/kimi-k2.6", in: 810, out: 3850, verifiable: true },
+  { modelId: "z-ai/glm-5.3", in: 1800, out: 5750, verifiable: true },
 ];
 
 export interface MockOptions {

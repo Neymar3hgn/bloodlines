@@ -1,9 +1,11 @@
 /**
  * Every read of the chain goes through this file. There is no backend: these are
- * plain NEAR view calls from the reader's browser. If one fails, the site carries
- * on from snapshot.json.
+ * plain NEAR view calls from the reader's browser. The site opens from snapshot.json,
+ * then reads whatever is newer straight from the colony and merges it in, so a round
+ * can be watched as it happens. If a read fails, the site carries on with what it has.
  */
 import { useEffect, useState } from "react";
+import { isRunning, newerThan, type Read } from "./merge.ts";
 import type { Snapshot, Stats } from "./types";
 
 const RPC: Record<string, string> = {
@@ -12,6 +14,8 @@ const RPC: Record<string, string> = {
 };
 
 const POLL_MS = 30_000;
+/** While a round is running, the page follows it. */
+const ROUND_POLL_MS = 10_000;
 /** One missed read is not an outage, so a good read stays on show for two polls. */
 const STALE_MS = 2.5 * POLL_MS;
 const SPACING_MS = 220;
@@ -77,36 +81,60 @@ export interface Live {
   /** The latest stats read from the chain, or null while only the snapshot is available. */
   stats: Stats | null;
   readAt: number | null;
+  /** The published snapshot with everything newer merged in. Null until the first good read. */
+  snapshot: Snapshot | null;
 }
 
-/** Reads `get_stats` on load and every 30 seconds. A failed read silently changes nothing but the badge. */
-export function useLive(snapshot: Snapshot | null): Live {
-  const [live, setLive] = useState<Live>({ stats: null, readAt: null });
+/**
+ * Follows the colony: every 30 seconds, and every 10 while a round is running. A
+ * failed read changes nothing but the badge, and a hidden tab catches up when shown.
+ */
+export function useLive(published: Snapshot | null): Live {
+  const [live, setLive] = useState<Live>({ stats: null, readAt: null, snapshot: null });
 
   useEffect(() => {
-    if (!snapshot || (import.meta.env.DEV && snapshot.fixture)) return;
+    if (!published || (import.meta.env.DEV && published.fixture)) return;
     let stopped = false;
+    let reading = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let current = published;
+    const paced: Read = (account, method, args = {}) => patientView(published.network, account, method, args);
+
+    const next = () => {
+      clearTimeout(timer);
+      if (!stopped) timer = setTimeout(tick, isRunning(current) ? ROUND_POLL_MS : POLL_MS);
+    };
     const read = async () => {
+      if (reading) return;
+      reading = true;
       try {
-        const stats = await view<Stats>(snapshot.network, snapshot.colony, "get_stats");
-        if (!stopped) setLive({ stats, readAt: Date.now() });
+        const stats = await view<Stats>(current.network, current.colony, "get_stats");
+        current = await newerThan(current, stats, paced);
+        if (!stopped) setLive({ stats, readAt: Date.now(), snapshot: current });
       } catch {
-        if (!stopped) setLive((prev) => (prev.readAt && Date.now() - prev.readAt < STALE_MS ? prev : { stats: null, readAt: null }));
+        if (!stopped) setLive((prev) => (prev.readAt && Date.now() - prev.readAt < STALE_MS ? prev : { ...prev, stats: null, readAt: null }));
       }
+      reading = false;
     };
-    // Always read on load. After that, a hidden tab waits and catches up when it is shown.
-    const readIfSeen = () => {
-      if (!document.hidden) read();
+    const tick = async () => {
+      if (!document.hidden) await read();
+      next();
     };
-    read();
-    const timer = setInterval(readIfSeen, POLL_MS);
-    document.addEventListener("visibilitychange", readIfSeen);
+    const show = () => {
+      if (document.hidden) return;
+      clearTimeout(timer);
+      tick();
+    };
+
+    // Always read on load. After that, a hidden tab waits.
+    read().then(next);
+    document.addEventListener("visibilitychange", show);
     return () => {
       stopped = true;
-      clearInterval(timer);
-      document.removeEventListener("visibilitychange", readIfSeen);
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", show);
     };
-  }, [snapshot]);
+  }, [published]);
 
   return live;
 }

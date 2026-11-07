@@ -1,8 +1,15 @@
 # Running on mainnet
 
-Testnet is enough to enter (rule Q-010), and everything on it is real code. A small
-mainnet run adds one thing: a reveal batch settled on the real `intents.near` with
-real USDC, which no Swarms entry we read has shown. It is optional.
+A small mainnet run is recommended. The hackathon's rules accept testnet projects, but
+ask for mainnet where an integration is mainnet-only (Q-010), and NEAR Intents has no
+official testnet: the advice is mainnet, separate dev accounts, tiny amounts and
+`dry: true` quotes (Q-007).
+
+Clade's testnet colony runs against a third-party copy of the Intents contract with the
+same code hash as `intents.near`. That is real code, but it is not the real deployment,
+so this run is what proves the swarm settles on the contract the track means. It also
+shows a reveal batch and a pool settled with real USDC, which no Swarms entry we read
+has done.
 
 Real money is involved, so these steps are for the project owner to run.
 
@@ -10,12 +17,12 @@ Real money is involved, so these steps are for the project owner to run.
 
 | Item | NEAR |
 |---|---|
-| Colony contract storage, returned if the account is deleted | 3.5 |
+| Colony contract storage, returned if the account is deleted | 3.7 |
 | Agent code, published as a global contract, burned | 0.55 |
 | Example asker contract | 0.02 |
 | Three agents, 0.04 each | 0.12 |
 | Colony state and gas for a few rounds | 1.5 |
-| **Total** | **about 6 NEAR** |
+| **Total** | **about 6.5 NEAR** |
 
 Plus a few dollars of USDC for agent capital and bounties. For a smaller run, lower
 `capital` and `bounty`. A share pays 0.01 USDC.
@@ -36,8 +43,11 @@ npm run deploy
 # 3. Deposit USDC into the keeper's balance on intents.near.
 
 # 4. Run a short season. Use a small number of questions.
-CLADE_NETWORK=mainnet npm run season -- --ai --questions 2
+CLADE_NETWORK=mainnet npm run season -- --ai --questions 2 --pools 2
 ```
+
+Add the transaction links to the README. `--pools 2` puts a research pool on the first
+round, so a pooled purchase also settles on the real contract.
 
 Mainnet bills are not scaled: `bill_scale` is 1, so an agent pays what the model cost.
 

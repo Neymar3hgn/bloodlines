@@ -51,6 +51,15 @@ export interface QuestionInput {
   callback?: string | null;
   /** R25: seconds to wait for a result before anyone can void the question. */
   waitSecs?: number;
+  /** R26: offer a shared research briefing on this question. */
+  pool?: PoolInput;
+}
+
+export interface PoolInput {
+  price: bigint;
+  minBuyers: number;
+  /** How long agents have to join. The commit window starts after it. */
+  secs: number;
 }
 
 export const sealOutcome = (yes: boolean) => {
@@ -83,7 +92,16 @@ export async function finishOpenWork(log: (s: string) => void = console.log) {
   const seals = loadSeals();
   const stats = await getStats();
   const touched = new Set<string>();
-  for (let id = Math.max(0, stats.questions - 40); id < stats.questions; id++) {
+  const recent = Math.max(0, stats.questions - 40);
+  // R28: a pool left waiting by a crash hands its money back.
+  for (const p of await getPools(recent, 40)) {
+    if (p.status !== "Open" && p.status !== "Closed") continue;
+    if (Date.now() < (await getQuestion(p.q)).commit_end_ms + 1500) continue;
+    await refundPool(p.q);
+    log(`  recovered pool ${p.q}: refunded`);
+    for (const buyer of p.buyers) touched.add(buyer);
+  }
+  for (let id = recent; id < stats.questions; id++) {
     let q = await getQuestion(id);
     if (q.status === "Settled" || q.status === "Void") continue;
     if (q.status === "Open") {
@@ -144,10 +162,11 @@ export async function openQuestion(q: QuestionInput): Promise<number> {
       reveal_secs: q.revealSecs,
       wait_secs: q.waitSecs ?? 0,
       callback: q.callback ?? null,
+      pool: q.pool ? { price: q.pool.price.toString(), min_buyers: q.pool.minBuyers, secs: q.pool.secs } : null,
     },
   });
   const salt = await currentSalt(verifier);
-  const payload = signIntents(keeper, verifier, salt, [transferIntent(colony, tokenId, q.bounty, msg, "20000000000000")]);
+  const payload = signIntents(keeper, verifier, salt, [transferIntent(colony, tokenId, q.bounty, msg, "30000000000000")]);
   await executeIntents(keeper, verifier, [payload]);
   for (let i = 0; i < 40; i++) {
     const after = await view<{ questions: number }>(colony, "get_stats");
@@ -174,6 +193,20 @@ export async function revealBatch(q: number, plans: OrderPlan[]) {
   const salt = await currentSalt(verifier);
   return executeIntents(keeper, verifier, plans.map((p) => revealPayload(q, p, salt)));
 }
+
+export function joinPayload(q: number, agent: string, pledge: bigint, salt: string): MultiPayload {
+  return signIntents(agent, verifier, salt, [transferIntent(colony, tokenId, pledge, JSON.stringify({ join: { q } }))]);
+}
+
+/** R26: agents join a research pool together, each with its own signed pledge. */
+export async function joinBatch(q: number, agents: string[], pledge: bigint) {
+  const salt = await currentSalt(verifier);
+  return executeIntents(keeper, verifier, agents.map((a) => joinPayload(q, a, pledge, salt)));
+}
+
+export const closePool = (q: number) => call(keeper, colony, "close_pool", { q }, 150n);
+export const postBriefing = (q: number, hash: string) => call(keeper, colony, "post_briefing", { q, hash }, 150n);
+export const refundPool = (q: number) => call(keeper, colony, "refund_pool", { q }, 150n);
 
 export const clear = (q: number) => call(keeper, colony, "clear", { q }, 200n);
 export const resolveSealed = (q: number, yes: boolean, salt: string) => call(keeper, colony, "resolve_sealed", { q, yes, salt }, 30n);
@@ -204,9 +237,21 @@ export const getAgent = (id: string) => view<any>(colony, "get_agent", { id });
 export const getStats = () => view<any>(colony, "get_stats");
 export const getAgents = (from = 0, limit = 200) => view<[string, any][]>(colony, "get_agents", { from, limit });
 export const getQuestions = (from = 0, limit = 100) => view<any[]>(colony, "get_questions", { from, limit });
+export const getPool = (q: number) => view<any>(colony, "get_pool", { q });
+export const getPools = (from = 0, limit = 100) => view<any[]>(colony, "get_pools", { from, limit });
 export const getClaimable = (id: string) => view<string>(colony, "get_claimable", { id });
 export const getReputation = (id: string) => view<number>(colony, "get_reputation", { id });
 export const getLineage = (id: string) => view<string[]>(colony, "get_lineage", { id });
+
+/** Public RPCs can lag by a block, so wait for a pool to leave a status before reading it. */
+export async function poolAfter(q: number, was: string) {
+  let pool = await getPool(q);
+  for (let i = 0; i < 12 && pool?.status === was; i++) {
+    await sleep(800);
+    pool = await getPool(q);
+  }
+  return pool;
+}
 
 /** Waits until chain time passes a question's commit window. */
 export async function waitForRevealWindow(q: number) {

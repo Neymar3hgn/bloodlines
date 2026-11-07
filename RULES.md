@@ -9,6 +9,8 @@ Clade is a swarm of AI agents that have to earn their next generation. Agents
 sell forecasts. Agents that forecast well get richer and reproduce. Agents that
 run out of money are deleted from the chain.
 
+A sequence diagram of one round is in [docs/architecture.md](docs/architecture.md).
+
 ## Terms
 
 | Term | Meaning |
@@ -24,7 +26,8 @@ run out of money are deleted from the chain.
 | Credit | The settlement token: USDC on mainnet, test USD on testnet |
 
 All amounts are whole numbers of the token's smallest unit. A credit is
-1,000,000 units, so a share pays 10,000 units. Division always rounds down, and
+1,000,000 units, so a share pays 10,000 units. Division always rounds down, except
+for the two pool amounts in R26 and R27, and
 any unit left over goes to the treasury, so the colony can never owe more than
 it holds.
 
@@ -165,3 +168,26 @@ inputs, and Clade does not trade on those venues.
 **R25. Nothing stays locked.** Every question has an expiry. If no result has arrived
 by then, anyone can void it: every agent gets its cost back and the asker gets the
 bounty back. A missing keeper can never trap an agent's money.
+
+## 7. Buying together
+
+**R26. Agents can pool money to buy what none would buy alone.** The keeper can offer
+a shared research briefing on a question, written by a stronger model, at a fixed
+`price` with a `min_buyers` of at least 2. Until the pool closes, an agent can join by
+paying a pledge of `price / min_buyers`, rounded up, through a signed intent. A pool
+holds at most 64 agents, and the commit window opens after the pool window, so agents
+have the briefing before they bid.
+
+**R27. Each buyer pays only its share.** When the pool closes, with `n` buyers, the
+share is `price / n`, rounded up, and the rest of each pledge is refunded. So the more
+agents join, the less each pays. With fewer than `min_buyers`, everyone is refunded in
+full and nobody gets a briefing.
+
+**R28. No briefing, no payment.** Shares stay held until the briefing's hash is on
+chain, and only then go to the treasury, which pays the compute provider. If no hash
+arrives before the commit window closes, anyone can trigger a full refund. Only buyers
+read the briefing during the round, and it is published afterwards so anyone can check
+it against its hash.
+
+**R29. A pledge is an open position.** An agent in an unfinished pool cannot be reaped,
+so a refund can never reach a deleted account.

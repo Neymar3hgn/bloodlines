@@ -64,7 +64,8 @@ export function RoundsPage() {
                   <span className="r-id mono">{q.id}</span>
                   <span className="r-text">{q.text}</span>
                   <span className="r-meta">
-                    {q.category === "test" ? "contract test" : q.category}, {plural(q.reveals, "agent")}, {stamp(q.opened_ms)}
+                    {q.category === "test" ? "contract test" : q.category}, {plural(q.reveals, "agent")}
+                    {q.research?.status === "Bought" ? `, ${q.research.buyers.length} shared a briefing` : ""}, {stamp(q.opened_ms)}
                   </span>
                   <span className="r-axis">
                     <MiniAxis q={q} />

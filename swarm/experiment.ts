@@ -10,13 +10,14 @@
  *   NEARAI_API_KEY=... node swarm/experiment.ts            real forecasts
  *   node swarm/experiment.ts --replay                      no key, no cost, same result
  *   node swarm/experiment.ts --scripted                    test the machinery with fake forecasts
+ *   node swarm/experiment.ts --pools 60                    also test briefings on 60 exam questions
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { clear, lockFor, settle, type Order } from "../engine/market.ts";
 import { inPool } from "./chain.ts";
 import { childLabel, engages, gaussian, mutateNumbers, toOrder, type Genome, type Rng } from "./genome.ts";
 import { founders, MODELS } from "./founders.ts";
-import { AccountProblem, cacheKey, forecast, loadCache, rewriteStrategy, saveCache, type QuestionText } from "./llm.ts";
+import { AccountProblem, BRIEFING_MODEL, cacheKey, forecast, loadCache, rewriteStrategy, saveCache, writeBriefing, type QuestionText } from "./llm.ts";
 
 const flag = (name: string) => process.argv.includes(`--${name}`);
 const option = (name: string, dflt: number) => {
@@ -32,6 +33,7 @@ const SEED = option("seed", 7);
 const TRAIN = option("train", 240);
 const EXAM = option("exam", 120);
 const BUDGET = option("budget", 8); // dollars
+const BRIEFED = option("pools", 0); // exam questions sat again with a briefing
 
 /** The colony's rules. These match the deployed configuration. */
 export const RULES = {
@@ -96,15 +98,15 @@ interface Answer {
 }
 
 /** A hidden skill per genome, used only by --scripted, to test the machinery. */
-function fakeForecast(g: Genome, q: Q, key: string): Answer {
+function fakeForecast(g: Genome, q: Q, key: string, briefed: boolean): Answer {
   const r = makeRng(Number.parseInt(key.slice(0, 8), 16));
   const skill = 0.3 + 0.9 * (1 - Math.min(1, Math.abs(g.temperature - 0.3) * 2));
-  const reading = (q.yes ? 1 : -1) * skill + 1.1 * gaussian(r);
+  const reading = (q.yes ? 1 : -1) * skill + (briefed ? 0.55 : 1.1) * gaussian(r);
   return { probability: 1 / (1 + Math.exp(-reading)), cost: 400, reasoning: "scripted", receipt: null };
 }
 
-async function answer(g: Genome, q: Q): Promise<Answer | null> {
-  const key = cacheKey(g, q.id);
+async function answer(g: Genome, q: Q, briefing?: string): Promise<Answer | null> {
+  const key = cacheKey(g, briefing === undefined ? q.id : `${q.id}:briefed`);
   const hit = cache.get(key);
   if (hit) {
     cached += 1;
@@ -113,12 +115,12 @@ async function answer(g: Genome, q: Q): Promise<Answer | null> {
   }
   if (replay) return null;
   if (scripted) {
-    const a = fakeForecast(g, q, key);
+    const a = fakeForecast(g, q, key, briefing !== undefined);
     cache.set(key, { key, ...a });
     return a;
   }
   if (spent > BUDGET) throw new Error(`budget of $${BUDGET} reached`);
-  const f = await forecast(g, q).catch((e) => {
+  const f = await forecast(g, q, briefing).catch((e) => {
     // An account problem would fail every call, so it stops the run. Answers so far
     // are saved, and the same command picks up where this left off.
     if (e instanceof AccountProblem) throw e;
@@ -148,6 +150,34 @@ async function answer(g: Genome, q: Q): Promise<Answer | null> {
   cache.set(key, row);
   saveCache(RUN, row);
   return row as Answer;
+}
+
+/** R26: the briefing a pool would buy on this question, saved like any other answer. */
+async function briefingOf(q: Q): Promise<string | null> {
+  const key = `briefing:${q.id}`;
+  const hit = cache.get(key);
+  if (hit) {
+    spent += hit.cost / 1e6;
+    return hit.failed ? null : hit.text;
+  }
+  if (replay) return null;
+  if (scripted) {
+    const text = `A scripted briefing on question ${q.id}.`;
+    cache.set(key, { key, text, cost: 0 });
+    return text;
+  }
+  if (spent > BUDGET) throw new Error(`budget of $${BUDGET} reached`);
+  const b = await writeBriefing(q).catch((e) => {
+    if (e instanceof AccountProblem) throw e;
+    console.log(`  briefing failed for ${q.id}: ${String(e.message).slice(0, 100)}`);
+    return null;
+  });
+  calls += 1;
+  const row = b ? { key, q: q.id, model: BRIEFING_MODEL, text: b.text, cost: b.reply.cost, tee: b.reply.tee } : { key, q: q.id, failed: true, cost: 0 };
+  spent += row.cost / 1e6;
+  cache.set(key, row);
+  saveCache(RUN, row);
+  return b?.text ?? null;
 }
 
 const brier = (p: number, yes: boolean) => (p - (yes ? 1 : 0)) ** 2;
@@ -336,12 +366,12 @@ interface Pop {
 }
 
 /** One forecast per exam question from each member, then the market's answer. */
-async function sitExam(pop: Pop, exam: Q[]) {
+async function sitExam(pop: Pop, exam: Q[], briefings: (string | null)[] = []) {
   const prices: number[] = [];
   const means: number[] = [];
   const perMember = new Map<string, number[]>();
-  for (const q of exam) {
-    const replies = await inPool(pop.members, 8, (m) => answer(m.genome, q));
+  for (const [i, q] of exam.entries()) {
+    const replies = await inPool(pop.members, 8, (m) => answer(m.genome, q, briefings[i] ?? undefined));
     const orders: Order[] = [];
     const raw: number[] = [];
     pop.members.forEach((m, k) => {
@@ -412,6 +442,28 @@ const fb = exam.map((q, i) => brier(fx.prices[i], q.yes));
 const sb = exam.map((q, i) => brier(sx.prices[i], q.yes));
 const fa = exam.map((q, i) => brier(fx.means[i], q.yes));
 const test = pairedBootstrap(fb, sb, makeRng(SEED + 1));
+// R26: does a briefing help real forecasts? The founders sit the same questions again
+// with the text a pool would buy, so nothing differs but the briefing.
+let briefings = null;
+if (BRIEFED > 0) {
+  console.log("Briefing test...");
+  const sample = exam.slice(0, BRIEFED);
+  const texts = await inPool(sample, 4, briefingOf);
+  const kept = sample.map((q, i) => ({ q, i, text: texts[i] })).filter((k) => k.text !== null);
+  const read = await sitExam(founderPop, kept.map((k) => k.q), kept.map((k) => k.text));
+  const without = kept.map((k) => brier(fx.prices[k.i], k.q.yes));
+  const withIt = kept.map((k, i) => brier(read.prices[i], k.q.yes));
+  const difference = pairedBootstrap(without, withIt, makeRng(SEED + 2));
+  briefings = {
+    questions: kept.length,
+    model: BRIEFING_MODEL,
+    withoutBriefing: avg(without),
+    withBriefing: avg(withIt),
+    pairedDifference: difference,
+    verdict: difference.low > 0 ? "briefings measurably help" : difference.high < 0 ? "briefings measurably hurt" : "no measurable difference",
+  };
+}
+
 const singles = [...fx.perMember.entries()].map(([id, list]) => ({ id, brier: avg(list), n: list.length }));
 singles.sort((a, b) => a.brier - b.brier);
 const coinFlip = 0.25;
@@ -472,6 +524,7 @@ const report = {
     verdict,
     survivorsCount: survivorPop.members.length,
     humanCrowd: crowd,
+    briefings,
   },
   modelLeaderboard: leaderboard,
 };
@@ -485,5 +538,6 @@ console.log(`  Median founder            : ${singles[Math.floor(singles.length /
 console.log(`  Improvement: ${test.mean.toFixed(4)}, 95% interval ${test.low.toFixed(4)} to ${test.high.toFixed(4)}`);
 console.log(`  Verdict: ${verdict}`);
 if (crowd) console.log(`  Human crowd on the same ${crowd.questions} questions: ${crowd.crowd.toFixed(4)} (survivors ${crowd.survivorsOnTheseQuestions.toFixed(4)})`);
+if (briefings) console.log(`  Briefings on ${briefings.questions} questions: ${briefings.withoutBriefing.toFixed(4)} without, ${briefings.withBriefing.toFixed(4)} with. ${briefings.verdict}`);
 console.log(`Spent $${spent.toFixed(2)}, ${calls} new calls, ${cached} cached, ${verifiedReceipts} verified signatures`);
 for (const l of leaderboard) console.log(`  ${l.model.padEnd(40)} ${l.brier.toFixed(4)}  $${l.costPerThousand.toFixed(3)} per 1000`);

@@ -8,7 +8,8 @@ const INKS = 31;
 export type FeedItem =
   | { kind: "birth"; at: number; agent: Agent }
   | { kind: "death"; at: number; agent: Agent }
-  | { kind: "round"; at: number; question: Question };
+  | { kind: "round"; at: number; question: Question }
+  | { kind: "pool"; at: number; question: Question };
 
 export interface Model {
   snapshot: Snapshot;
@@ -63,7 +64,10 @@ export function buildModel(snapshot: Snapshot): Model {
     if (a.parent !== colony && a.status !== "Pending") feed.push({ kind: "birth", at: a.born_ms, agent: a });
     if (a.status === "Dead") feed.push({ kind: "death", at: a.died_ms, agent: a });
   }
-  for (const q of rounds) feed.push({ kind: "round", at: Math.min(q.reveal_end_ms, generated), question: q });
+  for (const q of rounds) {
+    feed.push({ kind: "round", at: Math.min(q.reveal_end_ms, generated), question: q });
+    if (q.research?.status === "Bought") feed.push({ kind: "pool", at: q.research.end_ms, question: q });
+  }
   feed.sort((a, b) => b.at - a.at);
 
   const alive = list.filter((a) => a.status !== "Dead").length;
@@ -110,14 +114,44 @@ export function heirOf(m: Model, agent: Agent): string {
 
 export const SIDE_NAME = ["none", "YES", "NO"] as const;
 
-export type RoundState = "sealing" | "revealing" | "waiting" | "void" | "voided" | "settled";
+export type RoundState = "pooling" | "sealing" | "revealing" | "waiting" | "void" | "voided" | "settled";
 
 /** What a question's chain status means for a reader. Time matters only while it is open. */
 export function roundState(q: Question, now: number): RoundState {
   if (q.status === "Void") return "void";
   if (q.status === "Settled") return q.yes_won === null ? "voided" : "settled";
-  if (q.status === "Open") return now < q.commit_end_ms ? "sealing" : "revealing";
+  if (q.status === "Open") {
+    if (q.research && now < q.research.end_ms) return "pooling";
+    return now < q.commit_end_ms ? "sealing" : "revealing";
+  }
   return "waiting";
+}
+
+/** The round the colony is running right now, if any. */
+export function runningRound(m: Model): Question | null {
+  for (const q of [...m.questions.values()].reverse()) if (q.status === "Open") return q;
+  return null;
+}
+
+/** Milliseconds left in the stage a running round is in. Zero once its windows have all closed. */
+export function timeLeft(q: Question, now: number): number {
+  const state = roundState(q, now);
+  const end = state === "pooling" ? q.research!.end_ms : state === "sealing" ? q.commit_end_ms : q.reveal_end_ms;
+  return Math.max(0, end - now);
+}
+
+/** One line on what a running round is doing, for a reader watching it happen. */
+export function stageLine(q: Question, now: number): string {
+  const left = timeLeft(q, now);
+  const remaining = `${Math.ceil(left / 1000)} s left`;
+  switch (roundState(q, now)) {
+    case "pooling":
+      return `Agents are joining a research pool, ${remaining}.`;
+    case "sealing":
+      return `${q.commits} sealed ${q.commits === 1 ? "bid" : "bids"} so far, ${remaining}.`;
+    default:
+      return left > 0 ? `${q.reveals} of ${q.commits} bids open, ${remaining}.` : `The windows have closed. The round clears next.`;
+  }
 }
 
 export const net = (o: Order) => big(o.payout) + big(o.reward) - big(o.cost) - big(o.bill);

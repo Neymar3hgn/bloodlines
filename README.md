@@ -19,8 +19,20 @@ names are the family tree**, and that comes straight from NEAR's account model.
 | Rules | [RULES.md](RULES.md), written before the code |
 | Colony contract | [`s1.clade.testnet`](https://testnet.nearblocks.io/address/s1.clade.testnet) |
 | Every claim and its proof | [docs/CLAIMS.md](docs/CLAIMS.md) |
-| Architecture and a round, step by step | [docs/architecture.md](docs/architecture.md) |
+| Architecture, and a sequence diagram of one round | [docs/architecture.md](docs/architecture.md) |
 | Security review, including a serious bug we found and fixed | [docs/security.md](docs/security.md) |
+
+## How it fits the AI Swarms track
+
+| The track asks for | In Clade |
+|---|---|
+| Multi-agent systems | Up to 32 agents with their own money and strategies, and no central planner. What the swarm answers, and who survives, comes out of how they trade |
+| NEAR Intents | Each agent's capital sits in its own Intents balance. Sealed reveals, pool pledges and births are signed intents, relayed in batches, all or nothing |
+| Sub-accounts | Every agent is a sub-account of its parent, so each action on chain traces back to one agent and its whole family |
+| Coordination markets and bidding | Sealed bids, a commit and reveal round, one clearing price. [R6 to R11](RULES.md) |
+| Collective purchasing | Agents pool money for a research briefing, and each pays only its share. [R26 to R29](RULES.md) |
+| Economies that emerge between agents | Birth, death and inheritance decide which strategies last. The colony even finds its own size |
+| Rules first, a simulation with no LLM calls, a live page | [RULES.md](RULES.md), `npm run sim`, and a site that follows rounds from the chain as they happen |
 
 ## Try it
 
@@ -33,23 +45,26 @@ npm ci
 
 | Do | You should see |
 |---|---|
-| `npm test` | `pass 55`, including 20,000 random order books that all balance exactly, and the whole AI path against a local mock |
+| `npm test` | `pass 75`, including 20,000 random order books that all balance exactly, and the whole AI path against a local mock |
 | `npm run sim` | A scripted colony with no AI calls, in seconds. Survivors beat founders on an exam, and lying loses money. Add `-- --seeds 8` for the published numbers |
 | `npm run verify` | The whole colony rebuilt from public chain data: `10 of 10 checks pass` |
-| `cd contracts && cargo test -p clade-core` | `7 passed`, including 2,000 vectors shared with the TypeScript engine (needs Rust 1.95) |
+| `cd contracts && cargo test -p clade-core` | `9 passed`, including 2,000 vectors shared with the TypeScript engine (needs Rust 1.95) |
 | `npm run mcp` | An MCP server that lets any AI agent read the swarm. See [below](#for-near-builders) |
 | `npm run e2e` | The rules tested on a live network, with real rejected attacks. This one needs its own funded test colony. The last run is in [data/e2e-report.json](data/e2e-report.json) |
 
 ## How a round works
 
 1. **Ask.** Someone pays a bounty to open a yes or no question.
-2. **Seal.** Each agent thinks, paying for its own inference, then commits a hash of
+2. **Buy together, if offered.** Agents can pool money for one research briefing from
+   a stronger model. Each pays only its share. If too few join, or the briefing never
+   arrives, everyone gets their money back.
+3. **Seal.** Each agent thinks, paying for its own inference, then commits a hash of
    one probability and one stake. Nobody can copy anybody.
-3. **Reveal.** Every agent signs an intent. One transaction carries all of them
+4. **Reveal.** Every agent signs an intent. One transaction carries all of them
    through NEAR Intents, so they land together or not at all.
-4. **Clear.** The stake-weighted median becomes the price, and **the price is the
+5. **Clear.** The stake-weighted median becomes the price, and **the price is the
    swarm's answer**. Agents above it hold YES, agents below it hold NO.
-5. **Settle.** When the answer is known, right agents take money from wrong ones.
+6. **Settle.** When the answer is known, right agents take money from wrong ones.
    Agents who beat the swarm also share the bounty.
 
 Then selection runs. An agent over the threshold can sign a request to have a child,
@@ -62,7 +77,7 @@ below the floor.
   name proves ancestry, and needs no registry to check.
 - **`DeleteAccount` with a beneficiary.** Death and inheritance are protocol actions.
 - **NEAR Intents.** Each agent's capital sits in its own Intents balance, and one
-  transaction can carry many agents' signed reveals, all or nothing.
+  transaction can carry many agents' signed reveals or pledges, all or nothing.
 - **Function-call keys.** An agent's only key can call the colony and nothing else.
 - **Global contracts.** Thousands of agents can share one 5.5 KB contract.
 - **NEAR AI Cloud.** Models run in secure enclaves and sign each answer, so an agent's
@@ -78,6 +93,7 @@ below the floor.
 | The rounds now on chain | **Scripted agents**, testing the contracts, labelled as such on the site |
 | Real AI forecasts and the go/no-go experiment | **Built and tested against a mock, not yet run on real models.** It needs a NEAR AI key. `swarm/experiment.ts` |
 | Live questions on real events | **Built and tested.** `swarm/live.ts` |
+| Research pools | **Built and tested in the simulator and against a mock.** The first on-chain run is next. Real briefings need the key |
 | Agent Market listing | **Built and tested against a mock, not listed.** It needs an account. [Guide](docs/agent-market.md) |
 | Simulator results | **Simulation.** They show the mechanism works, not that real AI improves |
 
@@ -107,6 +123,11 @@ From a live network and a simulation. Both can be re-run from this repo.
 - With perfect knowledge of every sealed order, the best possible lie gains only
   about 0.66% of stake, and orders are sealed.
 - A whale with 10% of the crowd's stake moved the answer by about 0.2 points.
+- When one question in three offered a shared briefing, a good briefing cut the swarm's
+  error on those questions by 42%, and a misleading one made it 2.5 times worse, because
+  every buyer reads the same text. The habit of buying started near 0.5 and ended at
+  0.44 with good briefings and 0.23 with misleading ones, over 40 seeds. It did not rise
+  even with good briefings, so buying together is not a free win.
 
 **A finding we did not plan:** the colony has a natural size. Bills go out and
 bounties come in, so it can feed about `bounty ÷ cost of one forecast` agents. Set
@@ -120,6 +141,7 @@ Things in this repo anyone can use:
 |---|---|
 | **The swarm as an oracle.** Any contract can ask a question and be called back with the answer | `on_clade_answer` in [contracts/asker](contracts/asker), 625 bytes |
 | **Self-resolving questions.** Resolved by reading a NEAR contract, with nobody trusted | `Resolver::OnChain` in [contracts/colony](contracts/colony) |
+| **Group buying on Intents.** Signed pledges, each buyer pays only its share, and automatic refunds if too few join or nothing arrives | `handle_join`, `close_pool`, `refund_pool` in [contracts/colony](contracts/colony), R26 to R29 |
 | **An MCP server** for reading the swarm from any AI agent | [tools/clade-mcp.ts](tools/clade-mcp.ts) |
 | **A worker that lists the swarm on Agent Market**, so buyers can hire it by the job | [docs/agent-market.md](docs/agent-market.md) |
 | **A guide to multi-signer Intents batches**, which NEAR's docs do not cover, from the Verifier's source | [docs/intents-batches.md](docs/intents-batches.md) |
@@ -142,6 +164,7 @@ npm run build              # needs Rust 1.95 and Binaryen
 CLADE_ROOT=yourname.testnet npm run deploy
 npm run season -- --questions 12              # scripted agents
 NEARAI_API_KEY=... npm run season -- --ai     # real forecasts
+npm run season -- --questions 12 --pools 3    # a research pool on every third round
 npm run snapshot
 ```
 
@@ -163,6 +186,9 @@ node swarm/live.ts resolve
   could sign other things if the runner were compromised.
 - Questions used for replay come from public sources, read-only. Model training
   cut-offs are not fully known, so some answers could leak into older questions.
+- The chain checks a briefing's hash, not its quality, and keeping the text from
+  non-buyers during a round is the keeper's promise. Agents judge a briefing only by
+  whether buying it pays.
 - Stablecoin payments from any chain are designed, not yet built.
 - See [docs/security.md](docs/security.md) for everything found, fixed and still open.
 

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { lockFor } from "../engine/market.ts";
 import { founders, MODELS } from "./founders.ts";
-import { CATEGORIES, childLabel, engages, mutateNumbers, toOrder, type Genome, type Rng } from "./genome.ts";
+import { CATEGORIES, childLabel, engages, joins, mutateNumbers, toOrder, type Genome, type Rng } from "./genome.ts";
 
 const base: Genome = { name: "t", model: "m", strategy: "s", temperature: 0.3, shrink: 1, size: 0.2, focus: {} };
 
@@ -68,6 +68,7 @@ test("rule_12 mutation stays inside safe bounds, over many generations", () => {
     assert.ok(g.temperature >= 0 && g.temperature <= 1.2);
     assert.ok(g.shrink >= 0.35 && g.shrink <= 1.6);
     assert.ok(g.size >= 0.02 && g.size <= 0.5);
+    assert.ok(g.pool! >= 0 && g.pool! <= 1);
     assert.ok(MODELS.includes(g.model));
     for (const c of CATEGORIES) assert.ok(g.focus[c] >= 0.05 && g.focus[c] <= 1);
   }
@@ -88,6 +89,25 @@ test("taking a question is a stable choice, so a run can be replayed", () => {
   assert.equal(engages(g, "a.near", "q1", "unknown"), true, "a category the agent has no view on is taken");
 });
 
+test("rule_26 joining a pool is a stable choice, driven by the agent's gene", () => {
+  const count = (pool: number | undefined) => {
+    let yes = 0;
+    for (let i = 0; i < 2000; i++) if (joins({ ...base, pool }, "a.near", `q${i}`)) yes += 1;
+    return yes;
+  };
+  assert.equal(count(0), 0);
+  assert.equal(count(1), 2000);
+  assert.ok(count(0.25) > 400 && count(0.25) < 600, String(count(0.25)));
+  assert.ok(count(undefined) > 900 && count(undefined) < 1100, "an agent born before pools joins about half the time");
+  const first = joins({ ...base, pool: 0.5 }, "a.near", "q1");
+  for (let i = 0; i < 20; i++) assert.equal(joins({ ...base, pool: 0.5 }, "a.near", "q1"), first);
+});
+
+test("rule_26 a pool gene starts from the default for agents born before pools", () => {
+  const child = mutateNumbers(base, rng(2), MODELS);
+  assert.ok(child.pool! > 0.1 && child.pool! < 0.9, String(child.pool));
+});
+
 test("a child's label is short and unique among its siblings", () => {
   const r = rng(5);
   const taken = new Set<string>();
@@ -105,4 +125,5 @@ test("founders are diverse and within limits", () => {
   assert.equal(new Set(all.map((g) => g.name)).size, 16);
   assert.ok(new Set(all.map((g) => g.model)).size >= 4);
   for (const g of all) assert.ok(g.name.length <= 3 && g.strategy.length > 20);
+  assert.equal(new Set(all.map((g) => g.pool)).size, 16, "founders start with a spread of pool genes");
 });

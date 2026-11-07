@@ -11,6 +11,7 @@
     "meanNoise": 1.2190378900214898,
     "meanHerd": 0.4680998686916646,
     "meanConfidence": 1.2401235100909296,
+    "meanPool": 0.5,
     "wealth": 27.379397,
     "maxGen": 1,
     "births": 3,
@@ -25,6 +26,7 @@
     "meanNoise": 1.231902282387934,
     "meanHerd": 0.3538310630768784,
     "meanConfidence": 1.3969192505888068,
+    "meanPool": 0.5,
     "wealth": 28.926017,
     "maxGen": 2,
     "births": 5,
@@ -39,6 +41,7 @@
     "meanNoise": 1.1997932328788874,
     "meanHerd": 0.31167762460503506,
     "meanConfidence": 1.4514612711221127,
+    "meanPool": 0.5,
     "wealth": 29.66771,
     "maxGen": 2,
     "births": 2,
@@ -53,6 +56,7 @@
     "meanNoise": 1.2346983636179223,
     "meanHerd": 0.27367544990527093,
     "meanConfidence": 1.3681645048344186,
+    "meanPool": 0.5,
     "wealth": 30.277986,
     "maxGen": 2,
     "births": 8,
@@ -67,6 +71,7 @@
     "meanNoise": 1.2862961511038093,
     "meanHerd": 0.2351512280758809,
     "meanConfidence": 1.3050209692703798,
+    "meanPool": 0.5,
     "wealth": 30.533008,
     "maxGen": 3,
     "births": 4,
@@ -81,6 +86,7 @@
     "meanNoise": 1.2726807836367453,
     "meanHerd": 0.22888934280578288,
     "meanConfidence": 1.3536418983533678,
+    "meanPool": 0.5,
     "wealth": 30.417179,
     "maxGen": 3,
     "births": 3,
@@ -95,6 +101,7 @@
     "meanNoise": 1.4806165880751159,
     "meanHerd": 0.224752088818092,
     "meanConfidence": 1.1803807098724095,
+    "meanPool": 0.5,
     "wealth": 30.678858,
     "maxGen": 5,
     "births": 7,
@@ -109,6 +116,7 @@
     "meanNoise": 1.4378261704143789,
     "meanHerd": 0.2275101818926266,
     "meanConfidence": 1.1535398865546271,
+    "meanPool": 0.5,
     "wealth": 30.575954,
     "maxGen": 5,
     "births": 4,
@@ -123,6 +131,7 @@
     "meanNoise": 1.3883690787296155,
     "meanHerd": 0.23018613035032237,
     "meanConfidence": 1.1239874572579829,
+    "meanPool": 0.5,
     "wealth": 30.413812,
     "maxGen": 5,
     "births": 4,
@@ -137,6 +146,7 @@
     "meanNoise": 1.3819055379578093,
     "meanHerd": 0.23078213995919739,
     "meanConfidence": 1.100636145142033,
+    "meanPool": 0.5,
     "wealth": 30.196366,
     "maxGen": 6,
     "births": 6,
@@ -151,6 +161,7 @@
     "meanNoise": 1.343109604374216,
     "meanHerd": 0.2219299120322236,
     "meanConfidence": 1.1306679725634816,
+    "meanPool": 0.5,
     "wealth": 30.335425,
     "maxGen": 6,
     "births": 1,
@@ -165,6 +176,7 @@
     "meanNoise": 1.3857331017179315,
     "meanHerd": 0.20491865344951898,
     "meanConfidence": 1.139867435839521,
+    "meanPool": 0.5,
     "wealth": 30.220734,
     "maxGen": 6,
     "births": 6,
@@ -185,7 +197,11 @@
    "maxAlive": 48,
    "maxStake": "60",
    "selection": true,
-   "seed": 1
+   "seed": 1,
+   "poolEvery": 0,
+   "poolPrice": "40000",
+   "poolMinBuyers": 4,
+   "briefingNoise": 0.3
   }
  },
  "control": {
@@ -199,6 +215,7 @@
     "meanNoise": 1.198058050442487,
     "meanHerd": 0.5524587391242385,
     "meanConfidence": 1.2272224064543844,
+    "meanPool": 0.5,
     "wealth": 20,
     "maxGen": 0,
     "births": 0,
@@ -213,6 +230,7 @@
     "meanNoise": 1.198058050442487,
     "meanHerd": 0.5524587391242385,
     "meanConfidence": 1.2272224064543844,
+    "meanPool": 0.5,
     "wealth": 15,
     "maxGen": 0,
     "births": 0,
@@ -227,6 +245,7 @@
     "meanNoise": 1.198058050442487,
     "meanHerd": 0.5524587391242385,
     "meanConfidence": 1.2272224064543844,
+    "meanPool": 0.5,
     "wealth": 10,
     "maxGen": 0,
     "births": 0,
@@ -241,6 +260,7 @@
     "meanNoise": 1.1960023272479077,
     "meanHerd": 0.5522852607036907,
     "meanConfidence": 1.2252908921465355,
+    "meanPool": 0.5,
     "wealth": 5.022,
     "maxGen": 0,
     "births": 0,
@@ -449,5 +469,39 @@
    "whaleLossPerPump": 128.89391000000012,
    "losingPumps": 1
   }
- ]
+ ],
+ "pools": {
+  "every": 3,
+  "price": "40000",
+  "seeds": 40,
+  "cases": [
+   {
+    "label": "good",
+    "briefingNoise": 0.3,
+    "gene": 0.4358858539753078,
+    "buyers": 14.025421204891606,
+    "withBriefing": 0.004675992719077364,
+    "withoutIt": 0.008067511426743853,
+    "conservationErrors": 0
+   },
+   {
+    "label": "middling",
+    "briefingNoise": 0.9,
+    "gene": 0.36762714038476174,
+    "buyers": 13.031390963938373,
+    "withBriefing": 0.008385714706817702,
+    "withoutIt": 0.007615916059007398,
+    "conservationErrors": 0
+   },
+   {
+    "label": "misleading",
+    "briefingNoise": 3,
+    "gene": 0.22867045554856297,
+    "buyers": 9.92615869241683,
+    "withBriefing": 0.020186481444296925,
+    "withoutIt": 0.0079658460340357,
+    "conservationErrors": 0
+   }
+  ]
+ }
 }

@@ -117,7 +117,7 @@ function Strategy({ agent, parent }: { agent: Agent; parent: Agent | undefined }
       <section className="strategy-block">
         <h2>Its strategy</h2>
         <Empty>
-          The written strategy for this agent is not in the public registry. The chain keeps only its hash: <code className="hash">{agent.genome_hash}</code>
+          The written strategy for this agent is not in the public registry yet. The chain keeps only its hash: <code className="hash">{agent.genome_hash}</code>
         </Empty>
       </section>
     );
@@ -160,6 +160,7 @@ function GenomeTable({ agent, parent }: { agent: Agent; parent: Agent | undefine
     { name: "Temperature", note: "How much its answers vary", value: g.temperature.toFixed(2), was: p?.temperature.toFixed(2) },
     { name: "Shrink", note: "Below 1 hedges toward 50, above 1 sharpens", value: g.shrink.toFixed(2), was: p?.shrink.toFixed(2) },
     { name: "Size", note: "Share of its credits staked per question", value: pct(g.size), was: p ? pct(p.size) : undefined },
+    { name: "Pools", note: "How likely it is to join a research pool", value: g.pool === undefined ? "50.0%, the default" : pct(g.pool), was: p ? (p.pool === undefined ? "50.0%, the default" : pct(p.pool)) : undefined },
   ];
   const focus = Object.entries(g.focus);
   const narrow = focus.filter(([, v]) => v < 1);
@@ -314,7 +315,7 @@ export function AgentPage({ id }: { id: string }) {
       <GenomeTable agent={agent} parent={parent} />
       <Children agent={agent} />
       <History agent={agent} />
-      <p className="small soft">Balances are from the snapshot of {stamp(Date.parse(m.snapshot.generated))}. Treasury holds {money(big(m.snapshot.treasury_credits))} {tokenSymbol(m.snapshot.network)}.</p>
+      <p className="small soft">Balances as of {stamp(Date.parse(m.snapshot.generated))}. Treasury holds {money(big(m.snapshot.treasury_credits))} {tokenSymbol(m.snapshot.network)}.</p>
     </article>
   );
 }

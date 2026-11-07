@@ -34,7 +34,7 @@ function CheckItYourself() {
     <section className="block check" aria-labelledby="check-title">
       <h2 id="check-title">Check it yourself</h2>
       <p>
-        This button re-reads every question's orders from the chain, from your own browser. It then rebuilds the price, every fill, every payout and the money balance with <code>engine/market.ts</code>,
+        This button re-reads every question's orders from the chain, from your own browser. It then rebuilds the price, every fill, every payout, every research pool and the money balance with <code>engine/market.ts</code>,
         the same reference file the contract is tested against. Your browser does the sums.
       </p>
       <button type="button" className="primary" onClick={run} disabled={check.state === "running"}>
@@ -262,6 +262,47 @@ function WhaleAudit({ sim }: { sim: Sim }) {
   );
 }
 
+function PoolAudit({ sim }: { sim: Sim }) {
+  const m = useModel();
+  const unit = tokenSymbol(m.snapshot.network);
+  const pools = sim.pools;
+  if (!pools?.cases.length) return null;
+  const good = pools.cases[0];
+  const bad = pools.cases[pools.cases.length - 1];
+  return (
+    <div className="audit">
+      <h3>The research pool audit</h3>
+      <p>
+        In this simulation, one question in {pools.every} offered a shared briefing for {column(pools.price)} {unit}, and colonies differed only in how good the briefings were. Every buyer reads the same text, so a wrong briefing misleads them all together. On the questions where a pool bought one, a good briefing cut the swarm's error by{" "}
+        {(100 * (1 - good.withBriefing / good.withoutIt)).toFixed(0)}%, and a misleading one multiplied it by {(bad.withBriefing / bad.withoutIt).toFixed(1)}. Selection noticed: the habit of buying started near 0.5 and ended at {good.gene.toFixed(2)} with good briefings and {bad.gene.toFixed(2)} with misleading ones.
+      </p>
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Briefings</th>
+            <th className="num">Habit at the end</th>
+            <th className="num">Buyers</th>
+            <th className="num">Error with it</th>
+            <th className="num">Without it</th>
+          </tr>
+        </thead>
+        <tbody>
+          {pools.cases.map((c) => (
+            <tr key={c.label}>
+              <td>{c.label}</td>
+              <td className="num mono">{c.gene.toFixed(2)}</td>
+              <td className="num mono">{c.buyers.toFixed(1)}</td>
+              <td className="num mono">{c.withBriefing.toFixed(4)}</td>
+              <td className="num mono">{c.withoutIt.toFixed(4)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="small soft">Over {plural(pools.seeds, "seed")}. Even with good briefings the habit drifts down a little, so buying is not a free win. Scripted agents here have skill built in, so this shows the rules can sort good research from bad. It does not show that a real briefing helps.</p>
+    </div>
+  );
+}
+
 function SimSection() {
   const { sim } = useModel().snapshot;
   return (
@@ -277,6 +318,7 @@ function SimSection() {
           <ExamBlock sim={sim} />
           <LyingAudit sim={sim} />
           <WhaleAudit sim={sim} />
+          <PoolAudit sim={sim} />
         </>
       )}
     </section>
@@ -324,6 +366,11 @@ function ExperimentView({ e }: { e: Experiment }) {
       {crowd && (
         <p>
           For scale: on the {crowd.questions} of these questions a public market had priced by the same date, people with real money scored {n(crowd.crowd)}. The survivors scored {n(crowd.survivorsOnTheseQuestions)} on those same questions.
+        </p>
+      )}
+      {exam?.briefings && (
+        <p>
+          Do briefings help? On {plural(exam.briefings.questions, "question")} here, the founders answered again with a briefing from {exam.briefings.model}, and nothing else changed. The swarm's answer scored {n(exam.briefings.withoutBriefing)} without it and {n(exam.briefings.withBriefing)} with it. The difference was {n(exam.briefings.pairedDifference.mean)}, with a 95% interval from {n(exam.briefings.pairedDifference.low)} to {n(exam.briefings.pairedDifference.high)}: {exam.briefings.verdict}.
         </p>
       )}
       {e.season && (

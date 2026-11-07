@@ -11,6 +11,8 @@ export interface Genome {
   shrink: number;
   size: number;
   focus: Record<string, number>;
+  /** How likely it is to join a research pool. Agents born before pools have none. */
+  pool?: number;
 }
 
 export interface Agent {
@@ -62,6 +64,26 @@ export type Resolver =
   | { Sealed: { hash: string } }
   | { OnChain: { contract: string; method: string; args: string; after_ms: number; at_least: string } };
 
+export type PoolStatus = "Open" | "Closed" | "Bought" | "Failed" | "Refunded";
+
+/** R26: agents buying a research briefing together. */
+export interface ResearchPool {
+  q: number;
+  price: string;
+  min_buyers: number;
+  pledge: string;
+  end_ms: number;
+  buyers: string[];
+  share: string;
+  held: string;
+  status: PoolStatus;
+  briefing_hash: string | null;
+  /** Off chain. Published with a later snapshot, once its round can no longer use it (R28). */
+  briefing?: string | null;
+  briefing_model?: string | null;
+  briefing_signed?: boolean;
+}
+
 export interface Question {
   id: number;
   text: string;
@@ -90,6 +112,8 @@ export interface Question {
   orders: Order[];
   /** Each agent's own words, when real models answered. Empty for scripted rounds. */
   thoughts?: Record<string, Thought>;
+  /** The question's research pool, if it offered one. Not to be confused with `pool`, the reward. */
+  research?: ResearchPool | null;
 }
 
 export interface Thought {
@@ -99,6 +123,8 @@ export interface Thought {
   /** True when the answer's enclave signature checked out. */
   signed: boolean;
   signer: string | null;
+  /** True when the agent read a briefing its pool bought. */
+  briefed?: boolean;
 }
 
 export interface Stats {
@@ -163,6 +189,7 @@ export interface Sim {
   lies?: { trials: number; crowd: number; lieWins: number; meanBestGainPct: number; meanRandomLiePct: number };
   habits?: { label: string; meanPct: number }[];
   pumps?: { share: number; trials: number; honestPriceError: number; pumpedPriceError: number; whaleLossPerPump: number; losingPumps: number }[];
+  pools?: { every: number; price: string; seeds: number; cases: { label: string; briefingNoise: number; gene: number; buyers: number; withBriefing: number; withoutIt: number }[] };
 }
 
 export interface Experiment {
@@ -184,6 +211,8 @@ export interface Experiment {
     survivorsCount?: number;
     /** A public market's price on the same date, on the questions it had priced. */
     humanCrowd?: { questions: number; crowd: number; foundersOnTheseQuestions: number; survivorsOnTheseQuestions: number } | null;
+    /** The same founders on the same questions, with and without a briefing. */
+    briefings?: { questions: number; model: string; withoutBriefing: number; withBriefing: number; pairedDifference: { mean: number; low: number; high: number }; verdict: string } | null;
   };
   modelLeaderboard?: { model: string; brier: number; forecasts: number; costPerThousand: number }[];
 }

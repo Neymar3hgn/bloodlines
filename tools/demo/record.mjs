@@ -31,6 +31,7 @@ mkdirSync(workDir, { recursive: true });
 
 const realRounds = snapshot.questions.filter((q) => q.status === "Settled" && q.yes_won !== null && q.category !== "test");
 const round = [...realRounds].sort((a, b) => b.reveals - a.reveals || b.id - a.id)[0];
+const pooled = [...realRounds].reverse().find((q) => q.research?.status === "Bought" && q.research.buyers.length >= 4);
 const dead = snapshot.agents.find((a) => a.status === "Dead");
 const child = [...snapshot.agents].filter((a) => a.generation > 0).sort((a, b) => b.generation - a.generation)[0];
 const scripted = snapshot.mode !== "ai";
@@ -142,21 +143,31 @@ if (round) {
   await wait(3500);
 }
 
-// 4. Death
+// 4. Buying together
+if (pooled) {
+  const each = Number(pooled.research.share) / 1e6;
+  const alone = Number(pooled.research.price) / 1e6;
+  await go(`/round/${pooled.id}`);
+  await toHeading("The research they bought together");
+  await caption(`${pooled.research.buyers.length} agents pooled money for one briefing. Each paid ${each.toFixed(3)}, not ${alone.toFixed(2)}.`);
+  await wait(5500);
+}
+
+// 5. Death
 if (dead) {
   await go(`/agent/${dead.id}`);
   await caption("Go broke, and your account is deleted from the chain. Your money goes to your parent.");
   await wait(5500);
 }
 
-// 5. Birth
+// 6. Birth
 if (child) {
   await go(`/agent/${child.id}`);
   await caption(scripted ? "Get rich, and you have a child, with its own strategy and a record inherited from you." : "Get rich, and you have a child, with a strategy rewritten from your own wins and losses.");
   await wait(5500);
 }
 
-// 6. Proof
+// 7. Proof
 await go("/proof");
 await caption("You don't have to trust any of this.");
 await wait(2500);
@@ -174,7 +185,7 @@ if (verdict) {
   await wait(6000);
 }
 
-// 7. The end
+// 8. The end
 await go("/");
 await caption(`${usesAi} Live on NEAR testnet. Built at NEAR HACKATHON.`);
 await wait(4500);
