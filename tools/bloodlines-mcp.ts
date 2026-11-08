@@ -63,9 +63,9 @@ const TOOLS = [
   },
   {
     name: "bloodlines_pool",
-    description: "The research pool on a question, if it has one: who bought the briefing, the price, and what each agent paid.",
+    description: "The research pool on a question, if it has one: who bought the briefing, what each agent paid, and the sealed sale that set the price: every seller's offer and who won.",
     inputSchema: { type: "object", properties: { question_id: { type: "number" } }, required: ["question_id"] },
-    run: (a: any) => view("get_pool", { q: a.question_id }),
+    run: async (a: any) => ({ pool: await view("get_pool", { q: a.question_id }), sale: ((await view("get_sales", { from: a.question_id, limit: 1 })) as any[])[0] ?? null }),
   },
   {
     name: "bloodlines_reputation",

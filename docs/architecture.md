@@ -49,6 +49,45 @@ Keeper                Agents            Intents contract        Colony
   |   anyone: refund_pool(q) -------------------------------->| R28 nobody pays
 ```
 
+## A round with a sealed auction
+
+This is the group-buying round. Buyers pool their demand for one briefing, sellers bid
+against each other in the dark, and each buyer pays only its share of the winning bid.
+
+```text
+Keeper        Buyers       Sellers       Intents contract        Colony
+  |             |             |                  |                  |
+  |-- question, ceiling and windows, signed `transfer` ------------>| R26, R30
+  |             |             |                  |                  |
+  |<- pledge ---|             |                  |                  |
+  |<---------- seal, sha256(offer:q:seller:ask:salt) ---|           |
+  |-- execute_intents, signed by each of them -->|                  |
+  |             |             |                  |-- mt_on_transfer ->| R26 one per buyer
+  |             |             |                  |-- on_auth(seller) ->| R30 one per seller
+  |             |             |                  |                  |
+  |   the pool window ends. Nobody has seen a single ask.           |
+  |<---------- reveal, the ask and its salt ---|                    |
+  |-- execute_intents ------------------------->|-- on_auth(seller) ->| R30 must match the seal, under the ceiling
+  |             |             |                  |                  |
+  |   the reveal window ends                     |                  |
+  |-- close_pool(q) --------------------------------------------->| R31 cheapest ask wins, ties to the lower name
+  |             |             |                  |                  |     share = ask / buyers, the rest refunded
+  |             |             |                  |                  |     no offer or too few buyers: all refunded
+  |             |             | the winner writes it with its own model
+  |<---------- delivery, sha256(text) and its bill ---|             |
+  |-- execute_intents ------------------------->|-- on_auth(winner) ->| R32 winner paid, less its bill
+  |-- the text ->| buyers only, until the round is over             |
+  |             | think, seal, reveal and clear, as above           |
+  |             |             |                  |                  |
+  | if no hash arrives before the commit window closes:             |
+  |   anyone: refund_pool(q) -------------------------------------->| R32 every buyer refunded, a strike for the winner
+```
+
+Money moves on the Intents ledger the whole way: pledges go to the colony's balance, and
+`sweep` sends each buyer's refund and the winner's payment to their own balances with
+`mt_transfer`. Run the same market with no chain and no model calls using
+`npm run sim:auction`: 20 scripted buyers against 5 scripted sellers.
+
 ## One life
 
 ```text
@@ -104,6 +143,15 @@ then reads the same text, and a wrong briefing misleads them all at once, which 
 cannot average out. So buying is a habit in the genome, not a rule: the briefing gives no
 probability of its own, each agent still forms its own view, and an agent that buys
 badly loses to one that does not.
+
+**Why a sealed auction?** With open offers, a seller only has to undercut the last price
+by one unit, so the price says nothing about what the work costs. Sealing makes each
+seller name its real price without seeing anyone else's. The simulator shows what that
+is worth: a lone seller climbs to the ceiling, and five rivals hold the price near the
+cost of writing.
+
+**Why can't the winner bet on its own briefing?** It would be paid to mislead the agents
+who bought it. So the contract refuses its reveal on that question (R33).
 
 **Why a global contract for agents?** A colony might create thousands of agents. Each
 one is under 0.001 NEAR of reference storage instead of carrying its own copy of the

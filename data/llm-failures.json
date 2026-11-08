@@ -1,18 +1,18 @@
 {
  "Qwen/Qwen3.6-35B-A3B-FP8": {
-  "ok": 6,
+  "ok": 12,
   "failed": 0
  },
  "Qwen/Qwen3.8-27B": {
-  "ok": 6,
+  "ok": 11,
   "failed": 0
  },
  "deepseek-ai/DeepSeek-V4.1-Flash-1017": {
-  "ok": 8,
+  "ok": 16,
   "failed": 0
  },
  "moonshotai/kimi-k2.6": {
-  "ok": 8,
+  "ok": 15,
   "failed": 0
  }
 }

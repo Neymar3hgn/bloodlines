@@ -9,8 +9,9 @@
                     "node":  "\u003e=22.18"
                 },
     "scripts":  {
-                    "test":  "node --test engine/market.test.ts sim/world.test.ts swarm/genome.test.ts swarm/llm.test.ts tools/market-worker.test.ts web/src/data/merge.test.ts",
+                    "test":  "node --test engine/market.test.ts sim/world.test.ts sim/auction.test.ts swarm/genome.test.ts swarm/llm.test.ts tools/market-worker.test.ts web/src/data/merge.test.ts",
                     "sim":  "node sim/run.ts",
+                    "sim:auction":  "node sim/run-auction.ts",
                     "vectors":  "node scripts/make-vectors.ts",
                     "build":  "powershell -NoProfile -File scripts/build.ps1",
                     "deploy":  "node scripts/deploy.ts",

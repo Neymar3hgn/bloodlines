@@ -26,6 +26,11 @@ If a claim is in the README, it is here, with how to check it. "On chain" means
 | Each buyer in a pool pays only its share, and the seller is paid in full | `Colony::close_pool`, R27 | `npm test`: `rule_27`. `cargo test`. `npm run e2e`. `npm run verify` recomputes every pool |
 | No briefing, no payment | `post_briefing`, `refund_pool`, R28 | `npm run e2e`: too late, wrong caller and bad hash are all refused, and anyone can trigger the refund |
 | A pledge cannot be lost to a reap | `handle_join` counts it as an open position, R29 | `npm run e2e` |
+| Sellers bid in the dark | `seal_offer`, `reveal_offer`, R30 | `npm run e2e:pools`: late seals, double seals, early reveals, reveals that do not match and asks above the ceiling are all refused |
+| The cheapest offer wins, and each buyer pays only its share of it | `close_pool`, R31 | `npm test`: `rule_31`. `npm run e2e:pools`. `npm run verify` and Check it yourself on the site recompute every sale |
+| No delivery, no payment, and only the winner can deliver | `deliver`, `refund_pool`, R32 | `npm run e2e:pools` |
+| Nobody sells to itself, and the writer cannot bet on what it wrote | `handle_join`, `seal_offer`, `handle_reveal`, R33 | `npm run e2e:pools` |
+| Competition lowers the price, in simulation | `sim/auction.ts`, 20 scripted buyers and up to 5 scripted sellers, no model calls | `npm run sim`, `npm run sim:auction`, and `npm test` |
 | The briefing published is the one bought | The hash is on chain before agents commit, R28 | `npm run verify`, and Check it yourself on the site, which hashes the text in your browser |
 | A replay reproduces a run exactly, with no key | `swarm/experiment.ts --replay` | `npm test` runs the AI path against a local mock, then replays it |
 | A contract can receive the answer | `on_clade_answer`, R22 | `npm run e2e`, `contracts/asker` |

@@ -141,7 +141,7 @@ export function heirOf(m: Model, agent: Agent): string {
 
 export const SIDE_NAME = ["none", "YES", "NO"] as const;
 
-export type RoundState = "pooling" | "sealing" | "revealing" | "waiting" | "void" | "voided" | "settled";
+export type RoundState = "pooling" | "offering" | "sealing" | "revealing" | "waiting" | "void" | "voided" | "settled";
 
 /** What a question's chain status means for a reader. Time matters only while it is open. */
 export function roundState(q: Question, now: number): RoundState {
@@ -149,6 +149,7 @@ export function roundState(q: Question, now: number): RoundState {
   if (q.status === "Settled") return q.yes_won === null ? "voided" : "settled";
   if (q.status === "Open") {
     if (q.research && now < q.research.end_ms) return "pooling";
+    if (q.research?.sale && now < q.research.sale.reveal_end_ms) return "offering";
     return now < q.commit_end_ms ? "sealing" : "revealing";
   }
   return "waiting";
@@ -163,7 +164,7 @@ export function runningRound(m: Model): Question | null {
 /** Milliseconds left in the stage a running round is in. Zero once its windows have all closed. */
 export function timeLeft(q: Question, now: number): number {
   const state = roundState(q, now);
-  const end = state === "pooling" ? q.research!.end_ms : state === "sealing" ? q.commit_end_ms : q.reveal_end_ms;
+  const end = state === "pooling" ? q.research!.end_ms : state === "offering" ? q.research!.sale!.reveal_end_ms : state === "sealing" ? q.commit_end_ms : q.reveal_end_ms;
   return Math.max(0, end - now);
 }
 
@@ -173,7 +174,9 @@ export function stageLine(q: Question, now: number): string {
   const remaining = `${Math.ceil(left / 1000)} s left`;
   switch (roundState(q, now)) {
     case "pooling":
-      return `Agents are joining a research pool, ${remaining}.`;
+      return q.research?.sale ? `Buyers are joining and sellers are sealing offers, ${remaining}.` : `Agents are joining a research pool, ${remaining}.`;
+    case "offering":
+      return `Sellers are opening their offers, ${remaining}.`;
     case "sealing":
       return `${q.commits} sealed ${q.commits === 1 ? "bid" : "bids"} so far, ${remaining}.`;
     default:

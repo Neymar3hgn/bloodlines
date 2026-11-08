@@ -4,10 +4,10 @@
  * against. If the chain cannot be reached, the snapshot's copy is checked instead,
  * and the page says which source each question used.
  */
-import { checkConservation, clear, lockFor, poolPledge, poolShare, settle, type Order as EngineOrder, type Side } from "../../../engine/market.ts";
+import { checkConservation, clear, lockFor, poolPledge, poolShare, settle, winningOffer, type Order as EngineOrder, type Side } from "../../../engine/market.ts";
 import { big } from "./format";
 import { patientView } from "./live";
-import type { Order, Question, ResearchPool, Snapshot } from "./types";
+import type { Order, Question, ResearchPool, Sale, Snapshot } from "./types";
 
 export interface Recheck {
   id: number;
@@ -77,15 +77,33 @@ export function recompute(q: Question, orders: Order[]): string[] {
 export function poolProblems(p: ResearchPool): string[] {
   const problems: string[] = [];
   const n = p.buyers.length;
-  const share = poolShare(big(p.price), Math.max(1, n));
+  // R31: with a sale the buyers split the winning ask, not the ceiling.
+  const share = poolShare(p.sale?.winner ? big(p.sale.ask) : big(p.price), Math.max(1, n));
   if (big(p.pledge) !== poolPledge(big(p.price), p.min_buyers)) problems.push("the pool's pledge is not price over minimum buyers");
   if (p.status === "Bought") {
     if (n < p.min_buyers) problems.push("the pool bought a briefing with too few buyers");
     if (big(p.share) !== share) problems.push(`pool share: chain ${p.share}, rebuilt ${share}`);
     if (!/^[0-9a-f]{64}$/.test(p.briefing_hash ?? "")) problems.push("the pool paid with no briefing hash on chain");
   }
-  if (p.status === "Failed" && n >= p.min_buyers) problems.push("the pool failed with enough buyers");
+  if (p.status === "Failed" && n >= p.min_buyers && !p.sale) problems.push("the pool failed with enough buyers");
   if (p.status !== "Open" && p.status !== "Closed" && big(p.held) !== 0n) problems.push("a finished pool still holds money");
+  if (p.sale) problems.push(...saleProblems(p, p.sale));
+  return problems;
+}
+
+/** R30-R33: did the cheapest offer win, and did the money add up? An empty list means yes. */
+export function saleProblems(p: ResearchPool, sale: Sale): string[] {
+  const problems: string[] = [];
+  const revealed = sale.offers.filter((o) => o.ask !== null).map((o) => ({ seller: o.seller, ask: big(o.ask!) }));
+  for (const o of revealed) if (o.ask <= 0n || o.ask > big(p.price)) problems.push(`${o.seller} asked outside the ceiling`);
+  for (const o of sale.offers) if (p.buyers.includes(o.seller)) problems.push(`${o.seller} sold to its own pool`);
+  if (sale.winner) {
+    const best = winningOffer(revealed);
+    if (best?.seller !== sale.winner || best.ask !== big(sale.ask)) problems.push("the winner is not the cheapest revealed offer");
+  } else if (p.status === "Bought") {
+    problems.push("a briefing was bought with no winning seller");
+  }
+  if (p.status === "Bought" && big(sale.paid) + big(sale.bill) !== big(p.share) * BigInt(p.buyers.length)) problems.push("the seller's pay and bill do not add up to what the buyers paid");
   return problems;
 }
 
@@ -101,7 +119,14 @@ async function allPools(snapshot: Snapshot, count: number): Promise<Map<number, 
   try {
     const rows = new Map<number, ResearchPool>();
     for (let from = 0; from < count; from += 50) {
-      for (const p of await patientView<ResearchPool[]>(snapshot.network, snapshot.colony, "get_pools", { from, limit: 50 })) rows.set(p.q, p);
+      const pools = await patientView<ResearchPool[]>(snapshot.network, snapshot.colony, "get_pools", { from, limit: 50 });
+      for (const p of pools) rows.set(p.q, p);
+      if (pools.length) {
+        for (const s of await patientView<Sale[]>(snapshot.network, snapshot.colony, "get_sales", { from, limit: 50 })) {
+          const p = rows.get(s.q);
+          if (p) p.sale = s;
+        }
+      }
     }
     return rows;
   } catch {

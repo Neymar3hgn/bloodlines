@@ -503,5 +503,137 @@
     "conservationErrors": 0
    }
   ]
+ },
+ "auction": {
+  "buyers": 20,
+  "rounds": 600,
+  "ceiling": "40000",
+  "pledge": "10000",
+  "seeds": 40,
+  "markets": [
+   {
+    "sellers": 1,
+    "price": 40000,
+    "buyers": 14.983500000000001,
+    "share": 2731.798,
+    "sold": 1,
+    "conservationErrors": 0
+   },
+   {
+    "sellers": 2,
+    "price": 8165.708374999999,
+    "buyers": 16.89575,
+    "share": 486.27925000000016,
+    "sold": 1,
+    "conservationErrors": 0
+   },
+   {
+    "sellers": 3,
+    "price": 8158.785750000001,
+    "buyers": 16.869875,
+    "share": 486.56812499999995,
+    "sold": 1,
+    "conservationErrors": 0
+   },
+   {
+    "sellers": 5,
+    "price": 7695.978727645095,
+    "buyers": 16.884500000000003,
+    "share": 458.6473420436908,
+    "sold": 0.945,
+    "conservationErrors": 0
+   }
+  ],
+  "standings": [
+   {
+    "id": "seller-5",
+    "plan": "flaky",
+    "wins": 293,
+    "income": "2231014",
+    "bills": "1857360",
+    "profit": "373654",
+    "strikes": 133
+   },
+   {
+    "id": "seller-2",
+    "plan": "undercut",
+    "wins": 263,
+    "income": "2061775",
+    "bills": "1929339",
+    "profit": "132436",
+    "strikes": 0
+   },
+   {
+    "id": "seller-1",
+    "plan": "climber",
+    "wins": 5,
+    "income": "42190",
+    "bills": "41330",
+    "profit": "860",
+    "strikes": 0
+   },
+   {
+    "id": "seller-3",
+    "plan": "fixed",
+    "wins": 0,
+    "income": "0",
+    "bills": "0",
+    "profit": "0",
+    "strikes": 0
+   },
+   {
+    "id": "seller-4",
+    "plan": "random",
+    "wins": 0,
+    "income": "0",
+    "bills": "0",
+    "profit": "0",
+    "strikes": 0
+   }
+  ],
+  "buckets": [
+   {
+    "from": 0,
+    "price": 7750.104166666667,
+    "buyers": 16.85,
+    "share": 462.84375,
+    "bought": 0.96
+   },
+   {
+    "from": 100,
+    "price": 7679.5268817204305,
+    "buyers": 16.96,
+    "share": 455.83870967741933,
+    "bought": 0.93
+   },
+   {
+    "from": 200,
+    "price": 7694.34693877551,
+    "buyers": 16.88,
+    "share": 458.7959183673469,
+    "bought": 0.98
+   },
+   {
+    "from": 300,
+    "price": 7730.477272727273,
+    "buyers": 16.76,
+    "share": 462.21590909090907,
+    "bought": 0.88
+   },
+   {
+    "from": 400,
+    "price": 7754.702127659574,
+    "buyers": 17,
+    "share": 457.5851063829787,
+    "bought": 0.94
+   },
+   {
+    "from": 500,
+    "price": 7707.5,
+    "buyers": 16.79,
+    "share": 460.3695652173913,
+    "bought": 0.92
+   }
+  ]
  }
 }

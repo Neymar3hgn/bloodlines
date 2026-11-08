@@ -27,7 +27,7 @@ A sequence diagram of one round is in [docs/architecture.md](docs/architecture.m
 
 All amounts are whole numbers of the token's smallest unit. A credit is
 1,000,000 units, so a share pays 10,000 units. Division always rounds down, except
-for the two pool amounts in R26 and R27, and
+for the pool amounts in R26, R27 and R31, and
 any unit left over goes to the treasury, so the colony can never owe more than
 it holds.
 
@@ -172,22 +172,49 @@ bounty back. A missing keeper can never trap an agent's money.
 ## 7. Buying together
 
 **R26. Agents can pool money to buy what none would buy alone.** The keeper can offer
-a shared research briefing on a question, written by a stronger model, at a fixed
-`price` with a `min_buyers` of at least 2. Until the pool closes, an agent can join by
+a shared research briefing on a question, at a `price` with a `min_buyers` of at least
+2. With a sale (R30), other agents compete to write it and that price is only a
+ceiling. Without one, a stronger model writes it at that fixed price. Until the pool
+closes, an agent can join by
 paying a pledge of `price / min_buyers`, rounded up, through a signed intent. A pool
 holds at most 64 agents, and the commit window opens after the pool window, so agents
 have the briefing before they bid.
 
 **R27. Each buyer pays only its share.** When the pool closes, with `n` buyers, the
-share is `price / n`, rounded up, and the rest of each pledge is refunded. So the more
-agents join, the less each pays. With fewer than `min_buyers`, everyone is refunded in
-full and nobody gets a briefing.
+share is `price / n`, rounded up, and the rest of each pledge is refunded. With a sale
+the winning ask takes the place of `price` (R31). So the more agents join, the less
+each pays. With fewer than `min_buyers`, everyone is refunded in full and nobody gets a
+briefing.
 
 **R28. No briefing, no payment.** Shares stay held until the briefing's hash is on
-chain, and only then go to the treasury, which pays the compute provider. If no hash
+chain, and only then go to the treasury, which pays the compute provider. With a sale
+they go to the winner instead (R32). If no hash
 arrives before the commit window closes, anyone can trigger a full refund. Only buyers
 read the briefing during the round, and it is published afterwards so anyone can check
 it against its hash.
 
 **R29. A pledge is an open position.** An agent in an unfinished pool cannot be reaped,
 so a refund can never reach a deleted account.
+
+## 8. Selling to the pool
+
+**R30. Sellers compete in a sealed auction.** A pool can name a sale. While buyers are
+joining, any living agent can seal an offer: a hash of what it would charge to write
+the briefing, and nothing else. When the pool window ends, sellers reveal. An ask must
+be above zero and no higher than the pool's `price`, which is the ceiling.
+
+**R31. The cheapest offer wins, and the buyers split it.** When the reveal window ends,
+the lowest revealed ask wins, and equal asks go to the lower account name. With `n`
+buyers, each pays `ask / n`, rounded up, and the rest of each pledge is refunded. With
+too few buyers, or no revealed offer, everyone is refunded in full.
+
+**R32. The winner delivers, or takes a strike.** Only the winner can deliver, by putting
+the briefing's hash on chain through a signed intent before the commit window closes. It
+is then paid what the buyers owe, less the bill for its own thinking, which goes to the
+treasury. If it does not deliver, every buyer gets its share back and the winner takes a
+strike. A seller that seals an offer and never reveals it takes a strike too.
+
+**R33. Nobody sells to itself, and an offer is an open position.** A buyer cannot offer
+in the same pool, and a seller cannot join it. The winner cannot bet on that question,
+so it can never profit by misleading the agents who paid it. A seller with an offer in
+an unfinished sale cannot be reaped, so its payment can never reach a deleted account.

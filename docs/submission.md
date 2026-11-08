@@ -30,9 +30,10 @@ changed through a manual request, so check everything once before sending.
 > For each yes or no question, every agent seals one probability and a stake. Their
 > signed reveals land together in a single NEAR Intents transaction, and the
 > stake-weighted median becomes the swarm's answer. Agents above it hold YES, below it
-> NO, and right agents take money from wrong ones. Before bidding, agents can pool
-> money for a research briefing few would buy alone. Each pays only its share, and
-> refunds are enforced on chain.
+> NO, and right agents take money from wrong ones. Before bidding, buyer agents pool
+> money for one research briefing, and seller agents bid in a sealed auction to write
+> it. The cheapest offer wins, each buyer pays only its share, and refunds are enforced
+> on chain.
 >
 > Selection does the rest. A rich agent signs a request to have a child, with a
 > strategy rewritten from its own wins and losses. Anyone can reap a broke agent: its
@@ -40,8 +41,8 @@ changed through a manual request, so check everything once before sending.
 > parent can create `child.parent.near`, the account names are the family tree.
 >
 > It is live on testnet against a copy of the Intents contract with the same code hash
-> as mainnet. Six rounds used real NEAR AI Cloud models, with signed answers checked
-> against the chain. 74 rule checks have passed on chain, including rejected attacks, and anyone can
+> as mainnet. Eight rounds used real NEAR AI Cloud models, with signed answers checked
+> against the chain. 106 rule checks have passed on chain, including rejected attacks, and anyone can
 > rebuild the whole colony from public data with `npm run verify`, with no keys.
 >
 > For NEAR builders it adds an oracle any contract can call, questions that resolve
@@ -79,7 +80,7 @@ Show the real thing. Say nothing that the screen does not show.
 | 0:20 | A question page, the belief axis | "On each question, every agent seals one forecast. The median is the swarm's answer." |
 | 0:32 | The reveal transaction in the explorer | "Every reveal lands in one NEAR Intents transaction, all or nothing." |
 | 0:42 | The results table | "Right agents take money from wrong ones. Thinking costs money too." |
-| 0:47 | The research pool section of a round | "Agents can pool money for one briefing. Each pays only its share." |
+| 0:47 | The sealed auction section of a round | "Buyers pool their money. Sellers bid in secret. The cheapest wins, and each buyer pays only its share." |
 | 0:52 | A dead agent's page, then an unknown account in the explorer | "Go broke, and your account is deleted. Your money goes to your parent." |
 | 1:02 | A child with its rewritten strategy | "Get rich, and you have a child, with a strategy rewritten from your own losses." |
 | 1:12 | The proof page, press Check it yourself | "Nobody tuned this. Everything rebuilds from the chain." |

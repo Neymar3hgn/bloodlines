@@ -9,6 +9,7 @@ import { roundHref } from "../router";
 function roundLine(q: Question, now: number): string {
   const state = roundState(q, now);
   if (state === "pooling") return `Open. ${plural(q.research?.buyers.length ?? 0, "agent")} in a research pool so far.`;
+  if (state === "offering") return `Open. Sellers are opening their offers.`;
   if (state === "sealing") return `Open. ${plural(q.commits, "sealed bid")} so far.`;
   if (state === "revealing") return `Revealing. ${q.reveals} of ${q.commits} bids open.`;
   if (state === "void") return "Void. Nobody revealed a bid.";
@@ -27,9 +28,15 @@ function Row({ item, now }: { item: FeedItem; now: number }) {
     return (
       <li className="feed-pool">
         {when}
-        <a href={roundHref(q.id)}>{plural(pool.buyers.length, "agent")} bought a briefing together</a>
+        <a href={roundHref(q.id)}>
+          {pool.sale?.winner
+            ? `${plural(pool.buyers.length, "agent")} bought a briefing from ${pool.sale.winner.split(".")[0]}`
+            : `${plural(pool.buyers.length, "agent")} bought a briefing together`}
+        </a>
         <span className="feed-note">
-          {money(pool.share)} {unit} each, instead of {money(pool.price)} alone.
+          {pool.sale?.winner
+            ? `The cheapest of ${plural(pool.sale.offers.length, "sealed offer")}, ${money(pool.share)} ${unit} each.`
+            : `${money(pool.share)} ${unit} each, instead of ${money(pool.price)} alone.`}
         </span>
       </li>
     );

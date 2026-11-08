@@ -8,7 +8,7 @@
 use clade_core as rules;
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::serde_json::{self, json, Value};
+use near_sdk::serde_json;
 use near_sdk::store::{IterableMap, LookupMap, Vector};
 use near_sdk::{
     env, ext_contract, near, require, AccountId, Allowance, BorshStorageKey, Gas, NearToken, PanicOnDefault, Promise,
@@ -43,6 +43,8 @@ const MAX_ACCOUNT_LEN: usize = 64;
 const STRIKES_TO_REAP: u8 = 3;
 /// R26: keeps `close_pool` and `refund_pool` well inside one transaction's gas.
 const MAX_BUYERS: usize = 64;
+/// R30: the same, for the sellers in one sale.
+const MAX_OFFERS: usize = 16;
 
 #[ext_contract(ext_verifier)]
 #[allow(dead_code)]
@@ -76,6 +78,7 @@ enum Key {
     Orders,
     Claimable,
     Pools,
+    Sales,
 }
 
 #[near(serializers = [borsh, json])]
@@ -247,6 +250,29 @@ pub struct Pool {
     pub briefing_hash: Option<String>,
 }
 
+/// R30: one seller's sealed offer. The ask is empty until it is revealed.
+#[near(serializers = [borsh, json])]
+#[derive(Clone)]
+pub struct Offer {
+    pub seller: AccountId,
+    pub seal: String,
+    pub ask: Option<U128>,
+}
+
+/// R30-R33: sellers competing to write a pool's briefing.
+#[near(serializers = [borsh, json])]
+#[derive(Clone)]
+pub struct Sale {
+    pub q: u64,
+    /// Sellers reveal after the pool window and before this.
+    pub reveal_end_ms: u64,
+    pub offers: Vec<Offer>,
+    pub winner: Option<AccountId>,
+    pub ask: U128,
+    pub paid: U128,
+    pub bill: U128,
+}
+
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
 pub struct PoolAsk {
@@ -254,6 +280,9 @@ pub struct PoolAsk {
     pub min_buyers: u32,
     /// How long agents have to join. The commit window starts after it.
     pub secs: u64,
+    /// R30: how long sellers have to reveal, after the pool window. Zero means no sale.
+    #[serde(default)]
+    pub reveal_secs: u64,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -299,6 +328,9 @@ pub enum Msg {
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
 pub enum AuthMsg {
     Spawn { label: String, public_key: PublicKey, genome: String },
+    SealOffer { q: u64, hash: String },
+    RevealOffer { q: u64, ask: U128, salt: String },
+    Deliver { q: u64, hash: String, bill: U128 },
 }
 
 #[near(serializers = [json])]
@@ -334,11 +366,12 @@ pub struct Colony {
     settled_total: u64,
     founders_open: bool,
     pools: LookupMap<u64, Pool>,
+    sales: LookupMap<u64, Sale>,
 }
 
-/// The colony's state before research pools, so a live colony can be upgraded.
+/// The colony's state before sealed sales, so a live colony can be upgraded.
 #[near(serializers = [borsh])]
-struct ColonyV1 {
+struct ColonyV2 {
     config: Config,
     agents: IterableMap<AccountId, AgentRec>,
     alive: u32,
@@ -349,13 +382,26 @@ struct ColonyV1 {
     claimable: LookupMap<AccountId, u128>,
     settled_total: u64,
     founders_open: bool,
+    pools: LookupMap<u64, Pool>,
 }
 
-fn event(name: &str, data: Value) {
-    env::log_str(&format!(
-        "EVENT_JSON:{}",
-        json!({"standard": "clade", "version": "1.0.0", "event": name, "data": [data]})
-    ));
+/// Written by hand, because each `json!` costs contract bytes, and bytes cost NEAR.
+/// `data` is the inside of one JSON object.
+fn event(name: &str, data: &str) {
+    env::log_str(&format!("EVENT_JSON:{{\"standard\":\"clade\",\"version\":\"1.0.0\",\"event\":\"{name}\",\"data\":[{{{data}}}]}}"));
+}
+
+/// Text an outsider chose, escaped so it cannot break out of an event.
+fn quoted(text: &str) -> String {
+    serde_json::to_string(text).unwrap_or_default()
+}
+
+fn outcome_json(yes: Option<bool>) -> &'static str {
+    match yes {
+        Some(true) => "true",
+        Some(false) => "false",
+        None => "null",
+    }
 }
 
 fn hex(bytes: &[u8]) -> String {
@@ -367,6 +413,7 @@ fn hex(bytes: &[u8]) -> String {
     }
     out
 }
+
 
 /// R6: the hash an agent commits to.
 pub fn commit_hash(q: u64, agent: &AccountId, belief: u8, stake: u64, salt: &str) -> [u8; 32] {
@@ -391,14 +438,15 @@ impl Colony {
             settled_total: 0,
             founders_open: true,
             pools: LookupMap::new(Key::Pools),
+            sales: LookupMap::new(Key::Sales),
         }
     }
 
-    /// Adds research pools to a colony deployed before them.
+    /// Adds sealed sales to a colony deployed before them.
     #[private]
     #[init(ignore_state)]
     pub fn migrate() -> Self {
-        let old: ColonyV1 = env::state_read().unwrap_or_else(|| env::panic_str("nothing to migrate"));
+        let old: ColonyV2 = env::state_read().unwrap_or_else(|| env::panic_str("nothing to migrate"));
         Self {
             config: old.config,
             agents: old.agents,
@@ -410,7 +458,8 @@ impl Colony {
             claimable: old.claimable,
             settled_total: old.settled_total,
             founders_open: old.founders_open,
-            pools: LookupMap::new(Key::Pools),
+            pools: old.pools,
+            sales: LookupMap::new(Key::Sales),
         }
     }
 
@@ -426,7 +475,7 @@ impl Colony {
         require!(!self.agents.contains_key(&id), "name is taken");
         let genome_hash = hex(&env::sha256(genome.as_bytes()));
         self.insert_agent(&id, env::current_account_id(), 0, genome_hash.clone(), 0);
-        event("birth", json!({"agent": id, "parent": env::current_account_id(), "generation": 0, "genome_hash": genome_hash, "genome": genome}));
+        event("birth", &format!("\"agent\":\"{id}\",\"parent\":\"{}\",\"generation\":0,\"genome_hash\":\"{genome_hash}\",\"genome\":{}", env::current_account_id(), quoted(&genome)));
 
         // The agent contract reads newline-separated text. See contracts/agent.
         let args = format!(
@@ -462,11 +511,15 @@ impl Colony {
     /// the signature, so `signer_id` really is the parent and a relayer pays the
     /// gas. Agents hold almost no NEAR, so this is how they normally reproduce.
     #[payable]
-    pub fn on_auth(&mut self, signer_id: AccountId, msg: String) -> Promise {
+    pub fn on_auth(&mut self, signer_id: AccountId, msg: String) -> PromiseOrValue<()> {
         require!(env::predecessor_account_id() == self.config.verifier, "only the Intents contract can authorize");
         match serde_json::from_str::<AuthMsg>(&msg).unwrap_or_else(|_| env::panic_str("bad message")) {
-            AuthMsg::Spawn { label, public_key, genome } => self.internal_spawn(signer_id, label, public_key, genome),
+            AuthMsg::Spawn { label, public_key, genome } => return self.internal_spawn(signer_id, label, public_key, genome).into(),
+            AuthMsg::SealOffer { q, hash } => self.seal_offer(signer_id, q, hash),
+            AuthMsg::RevealOffer { q, ask, salt } => self.reveal_offer(signer_id, q, ask, salt),
+            AuthMsg::Deliver { q, hash, bill } => self.deliver(signer_id, q, hash, bill),
         }
+        PromiseOrValue::Value(())
     }
 
     #[private]
@@ -494,10 +547,11 @@ impl Colony {
         updated.children += 1;
         updated.last_child_at = self.settled_total;
         self.agents.insert(parent.clone(), updated);
-        event("birth", json!({
-            "agent": child, "parent": parent, "generation": rec.generation + 1,
-            "genome_hash": genome_hash, "genome": genome, "credits": U128(credits), "prior": prior,
-        }));
+        event("birth", &format!(
+            "\"agent\":\"{child}\",\"parent\":\"{parent}\",\"generation\":{},\"genome_hash\":\"{genome_hash}\",\"genome\":{},\"credits\":\"{credits}\",\"prior\":{prior}",
+            rec.generation + 1,
+            quoted(&genome),
+        ));
         let args = format!("{label}\n{}\n{}\n{credits}", hex(public_key.as_bytes()), String::from(&public_key)).into_bytes();
         Promise::new(parent.clone())
             .function_call("create_child".to_string(), args, self.config.agent_near, GAS_CHILD)
@@ -519,7 +573,7 @@ impl Colony {
                 pr.children = pr.children.saturating_sub(1);
                 self.agents.insert(p, pr);
             }
-            event("birth_failed", json!({"agent": id}));
+            event("birth_failed", &format!("\"agent\":\"{id}\""));
         }
     }
 
@@ -558,7 +612,7 @@ impl Colony {
         rec.heir = Some(credit_heir.clone());
         self.agents.insert(agent.clone(), rec);
         self.alive -= 1;
-        event("death", json!({"agent": agent, "balance": U128(balance), "heir": credit_heir}));
+        event("death", &format!("\"agent\":\"{agent}\",\"balance\":\"{balance}\",\"heir\":\"{credit_heir}\""));
         Promise::new(agent).function_call("die".to_string(), format!("{credit_heir}\n{near_heir}").into_bytes(), NO_DEPOSIT, GAS_DIE)
     }
 
@@ -579,7 +633,7 @@ impl Colony {
         self.committers.insert((q, question.commits), agent.clone());
         question.commits += 1;
         self.questions.replace(q as u32, question);
-        event("commit", json!({"q": q, "agent": agent}));
+        event("commit", &format!("\"q\":{q},\"agent\":\"{agent}\""));
     }
 
     /// Money arrives here from the Intents contract: a bounty or a reveal.
@@ -620,7 +674,7 @@ impl Colony {
                     let mut rec = self.agent(&agent);
                     rec.strikes = rec.strikes.saturating_add(1);
                     self.agents.insert(agent.clone(), rec);
-                    event("strike", json!({"q": q, "agent": agent}));
+                    event("strike", &format!("\"q\":{q},\"agent\":\"{agent}\""));
                 }
             }
         }
@@ -630,7 +684,7 @@ impl Colony {
             question.status = QStatus::Void;
             self.credit(&question.opener.clone(), question.bounty.0);
             self.questions.replace(q as u32, question);
-            event("void", json!({"q": q}));
+            event("void", &format!("\"q\":{q}"));
             return;
         }
 
@@ -664,7 +718,7 @@ impl Colony {
         question.status = QStatus::Cleared;
         let price = question.price;
         let callback = question.callback.clone();
-        event("clear", json!({"q": q, "price": price, "matched": question.matched, "reveals": question.reveals}));
+        event("clear", &format!("\"q\":{q},\"price\":{price},\"matched\":{},\"reveals\":{}", question.matched, question.reveals));
         self.questions.replace(q as u32, question);
         // R22: tell the contract that asked.
         if let Some(cb) = callback {
@@ -704,13 +758,12 @@ impl Colony {
     }
 
     #[private]
-    pub fn on_oracle(&mut self, q: u64, #[callback_result] value: Result<Value, PromiseError>) {
-        let value = value.unwrap_or_else(|_| env::panic_str("the on-chain read failed"));
-        let number: u128 = match &value {
-            Value::String(s) => s.parse().unwrap_or_else(|_| env::panic_str("result is not a number")),
-            Value::Number(n) => n.as_u64().unwrap_or_else(|| env::panic_str("result is not a number")) as u128,
-            _ => env::panic_str("result is not a number"),
-        };
+    pub fn on_oracle(&mut self, q: u64) {
+        // Read as text, because a contract's bytes cost NEAR and a JSON value parser is large.
+        // The result is a JSON number, or a number in a string as NEAR amounts usually are.
+        let raw = env::promise_result_checked(0, 128).unwrap_or_else(|_| env::panic_str("the on-chain read failed"));
+        let text = core::str::from_utf8(&raw).unwrap_or("").trim_matches('"');
+        let number: u128 = text.parse().unwrap_or_else(|_| env::panic_str("result is not a number"));
         let Resolver::OnChain { at_least, .. } = self.question(q).resolver else { env::panic_str("not on-chain") };
         self.finish_resolution(q, number >= at_least.0, Some(format!("on-chain value {number}")));
     }
@@ -802,7 +855,7 @@ impl Colony {
             self.credit(&to, left);
             question.status = QStatus::Settled;
             self.settled_total += 1;
-            event("settle", json!({"q": q, "yes_won": question.yes_won, "rewarded": question.rewarded, "paid": question.paid}));
+            event("settle", &format!("\"q\":{q},\"yes_won\":{},\"rewarded\":\"{}\",\"paid\":\"{}\"", outcome_json(question.yes_won), question.rewarded.0, question.paid.0));
         }
         self.questions.replace(q as u32, question);
     }
@@ -814,14 +867,29 @@ impl Colony {
     pub fn close_pool(&mut self, q: u64) {
         let mut pool = self.pool(q);
         require!(pool.status == PoolStatus::Open, "the pool is not open");
-        require!(env::block_timestamp_ms() >= pool.end_ms, "the pool window is still open");
+        let mut sale = self.sales.get(&q).cloned();
+        let closes_at = sale.as_ref().map_or(pool.end_ms, |s| s.reveal_end_ms);
+        require!(env::block_timestamp_ms() >= closes_at, "the pool window is still open");
         let buyers = pool.buyers.len() as u32;
-        if buyers < pool.min_buyers {
+        // R31: the lowest revealed ask, and equal asks go to the lower account name.
+        let cheapest = sale.as_ref().and_then(|s| s.offers.iter().filter_map(|o| o.ask.map(|a| (a.0, o.seller.clone()))).min());
+        let buying = buyers >= pool.min_buyers && (sale.is_none() || cheapest.is_some());
+        let winner = if buying { cheapest.clone().map(|(_, seller)| seller) } else { None };
+        if let Some(s) = sale.as_mut() {
+            self.settle_sellers(s, winner.as_ref());
+            if let (true, Some((ask, seller))) = (buying, cheapest.clone()) {
+                s.ask = U128(ask);
+                s.winner = Some(seller);
+            }
+            self.sales.insert(q, s.clone());
+        }
+        let price = cheapest.filter(|_| buying).map_or(pool.price.0, |(ask, _)| ask);
+        if !buying {
             self.release_buyers(&pool, pool.pledge.0);
             pool.held = U128(0);
             pool.status = PoolStatus::Failed;
         } else {
-            let share = rules::pool_share(pool.price.0, buyers);
+            let share = rules::pool_share(price, buyers);
             for agent in &pool.buyers {
                 self.credit(agent, pool.pledge.0 - share);
             }
@@ -829,20 +897,21 @@ impl Colony {
             pool.held = U128(share * buyers as u128);
             pool.status = PoolStatus::Closed;
         }
-        event("pool_close", json!({"q": q, "buyers": buyers, "share": pool.share, "status": pool.status}));
+        event("pool_close", &format!("\"q\":{q},\"buyers\":{buyers},\"share\":\"{}\",\"status\":\"{:?}\"", pool.share.0, pool.status));
         self.pools.insert(q, pool);
     }
 
     /// R28: the keeper puts the briefing's hash on chain, and only then is it paid for.
     pub fn post_briefing(&mut self, q: u64, hash: String) {
         require!(env::predecessor_account_id() == self.config.keeper, "only the keeper");
+        require!(!self.sales.contains_key(&q), "the winning seller delivers this briefing");
         let mut pool = self.pool(q);
         require!(pool.status == PoolStatus::Closed, "the pool is not waiting for a briefing");
         require!(env::block_timestamp_ms() < self.question(q).commit_end_ms, "too late for a briefing");
         parse_hash(&hash);
         self.release_buyers(&pool, 0);
         self.credit(&self.config.treasury.clone(), pool.held.0);
-        event("pool_bought", json!({"q": q, "hash": hash, "paid": pool.held}));
+        event("pool_bought", &format!("\"q\":{q},\"hash\":\"{hash}\",\"paid\":\"{}\"", pool.held.0));
         pool.held = U128(0);
         pool.status = PoolStatus::Bought;
         pool.briefing_hash = Some(hash);
@@ -857,9 +926,22 @@ impl Colony {
         require!(env::block_timestamp_ms() >= self.question(q).commit_end_ms, "a briefing can still arrive");
         let each = if pool.status == PoolStatus::Closed { pool.share.0 } else { pool.pledge.0 };
         self.release_buyers(&pool, each);
+        if let Some(sale) = self.sales.get(&q).cloned() {
+            match (pool.status, sale.winner.clone()) {
+                // R32: it won and did not deliver.
+                (PoolStatus::Closed, Some(winner)) => {
+                    let mut rec = self.agent(&winner);
+                    rec.open = rec.open.saturating_sub(1);
+                    rec.strikes = rec.strikes.saturating_add(1);
+                    self.agents.insert(winner, rec);
+                }
+                // Nobody closed the pool, so nobody won.
+                _ => self.settle_sellers(&sale, None),
+            }
+        }
         pool.held = U128(0);
         pool.status = PoolStatus::Refunded;
-        event("pool_refund", json!({"q": q, "each": U128(each)}));
+        event("pool_refund", &format!("\"q\":{q},\"each\":\"{each}\""));
         self.pools.insert(q, pool);
     }
 
@@ -930,6 +1012,13 @@ impl Colony {
 
     pub fn get_pool(&self, q: u64) -> Option<Pool> {
         self.pools.get(&q).cloned()
+    }
+
+
+    pub fn get_sales(&self, from: u64, limit: u64) -> Vec<Sale> {
+        (from..core::cmp::min(from + limit, self.questions.len() as u64))
+            .filter_map(|q| self.sales.get(&q).cloned())
+            .collect()
     }
 
     pub fn get_pools(&self, from: u64, limit: u64) -> Vec<Pool> {
@@ -1016,6 +1105,87 @@ impl Colony {
 
     fn pool(&self, q: u64) -> Pool {
         self.pools.get(&q).cloned().unwrap_or_else(|| env::panic_str("this question has no pool"))
+    }
+
+    fn sale(&self, q: u64) -> Sale {
+        self.sales.get(&q).cloned().unwrap_or_else(|| env::panic_str("this pool has no sale"))
+    }
+
+    /// R30: seals what the agent would charge. Only its hash goes on chain.
+    fn seal_offer(&mut self, seller: AccountId, q: u64, hash: String) {
+        let mut rec = self.agent(&seller);
+        let pool = self.pool(q);
+        let mut sale = self.sale(q);
+        require!(rec.status == Status::Alive, "agent is not alive");
+        require!(pool.status == PoolStatus::Open && env::block_timestamp_ms() < pool.end_ms, "sealing has ended");
+        require!(hash.len() == 64 && parse_hash(&hash) != [0u8; 32], "bad seal");
+        require!(!pool.buyers.contains(&seller), "a buyer cannot sell to its own pool");
+        require!(!sale.offers.iter().any(|o| o.seller == seller), "already offered");
+        require!(sale.offers.len() < MAX_OFFERS, "the sale is full");
+        require!(rec.open < self.config.max_open, "too many open questions");
+        // R33: an offer is an open position.
+        rec.open += 1;
+        self.agents.insert(seller.clone(), rec);
+        sale.offers.push(Offer { seller: seller.clone(), seal: hash, ask: None });
+        self.sales.insert(q, sale);
+        event("offer_seal", &format!("\"q\":{q},\"seller\":\"{seller}\""));
+    }
+
+    /// R30: opens a sealed offer, once the pool window has ended.
+    fn reveal_offer(&mut self, seller: AccountId, q: u64, ask: U128, salt: String) {
+        let pool = self.pool(q);
+        let mut sale = self.sale(q);
+        let now = env::block_timestamp_ms();
+        require!(now >= pool.end_ms && now < sale.reveal_end_ms, "the reveal window is closed");
+        require!(ask.0 > 0 && ask.0 <= pool.price.0, "ask is out of bounds");
+        let want = hex(&env::sha256(format!("offer:{q}:{seller}:{}:{salt}", ask.0).as_bytes()));
+        let offer = sale.offers.iter_mut().find(|o| o.seller == seller).unwrap_or_else(|| env::panic_str("no offer to reveal"));
+        require!(offer.ask.is_none(), "already revealed");
+        require!(offer.seal == want, "reveal does not match the seal");
+        offer.ask = Some(ask);
+        self.sales.insert(q, sale);
+        event("offer_reveal", &format!("\"q\":{q},\"seller\":\"{seller}\",\"ask\":\"{}\"", ask.0));
+    }
+
+    /// R32: the winner puts the briefing's hash on chain and is paid.
+    fn deliver(&mut self, seller: AccountId, q: u64, hash: String, bill: U128) {
+        let mut pool = self.pool(q);
+        let mut sale = self.sale(q);
+        require!(pool.status == PoolStatus::Closed, "the pool is not waiting for a briefing");
+        require!(sale.winner.as_ref() == Some(&seller), "only the winning seller can deliver");
+        require!(env::block_timestamp_ms() < self.question(q).commit_end_ms, "too late for a briefing");
+        parse_hash(&hash);
+        require!(bill.0 <= pool.held.0, "the bill is more than the sale");
+        let paid = pool.held.0 - bill.0;
+        self.release_buyers(&pool, 0);
+        let mut rec = self.agent(&seller);
+        rec.open = rec.open.saturating_sub(1);
+        rec.bills = U128(rec.bills.0 + bill.0);
+        self.agents.insert(seller.clone(), rec);
+        self.credit(&seller, paid);
+        self.credit(&self.config.treasury.clone(), bill.0);
+        sale.paid = U128(paid);
+        sale.bill = bill;
+        self.sales.insert(q, sale);
+        pool.held = U128(0);
+        pool.status = PoolStatus::Bought;
+        pool.briefing_hash = Some(hash);
+        self.pools.insert(q, pool);
+        event("offer_delivered", &format!("\"q\":{q},\"seller\":\"{seller}\",\"paid\":\"{paid}\""));
+    }
+
+    /// R32, R33: everyone but the winner is finished. Sealing and not revealing is a strike.
+    fn settle_sellers(&mut self, sale: &Sale, winner: Option<&AccountId>) {
+        for offer in &sale.offers {
+            let mut rec = self.agent(&offer.seller);
+            if winner != Some(&offer.seller) {
+                rec.open = rec.open.saturating_sub(1);
+            }
+            if offer.ask.is_none() {
+                rec.strikes = rec.strikes.saturating_add(1);
+            }
+            self.agents.insert(offer.seller.clone(), rec);
+        }
     }
 
     /// R29: the pool is finished for these buyers, so they can be reaped again.
@@ -1110,11 +1280,13 @@ impl Colony {
             require!(pool.price.0 > 0, "a pool needs a price");
             require!(pool.min_buyers >= 2 && pool.min_buyers as usize <= MAX_BUYERS, "bad minimum buyers");
             require!(pool.secs > 0 && pool.secs <= MAX_WINDOW_SECS, "bad pool window");
+            require!(pool.reveal_secs <= MAX_WINDOW_SECS, "bad reveal window");
         }
         let now = env::block_timestamp_ms();
         // R26: agents can only think about a briefing once they have it.
+        let sale_ms = ask.pool.as_ref().map_or(0, |p| p.reveal_secs * 1000);
         let pool_ms = ask.pool.as_ref().map_or(0, |p| p.secs * 1000);
-        let commit_end_ms = now + pool_ms + ask.commit_secs * 1000;
+        let commit_end_ms = now + pool_ms + sale_ms + ask.commit_secs * 1000;
         let reveal_end_ms = commit_end_ms + ask.reveal_secs * 1000;
         let mut expires_ms = reveal_end_ms + wait;
         match &ask.resolver {
@@ -1162,12 +1334,15 @@ impl Colony {
             refunded: U128(0),
             paid: U128(0),
         };
-        event("question", json!({"q": id, "text": question.text, "category": question.category, "bounty": question.bounty}));
+        event("question", &format!("\"q\":{id},\"text\":{},\"category\":{},\"bounty\":\"{}\"", quoted(&question.text), quoted(&question.category), question.bounty.0));
         self.questions.push(question);
         if let Some(ask) = pool {
             let pledge = rules::pool_pledge(ask.price.0, ask.min_buyers);
             let end_ms = now + pool_ms;
-            event("pool_open", json!({"q": id, "price": ask.price, "min_buyers": ask.min_buyers, "pledge": U128(pledge), "end_ms": end_ms}));
+            event("pool_open", &format!("\"q\":{id},\"price\":\"{}\",\"min_buyers\":{},\"pledge\":\"{pledge}\",\"end_ms\":{end_ms}", ask.price.0, ask.min_buyers));
+            if ask.reveal_secs > 0 {
+                self.sales.insert(id, Sale { q: id, reveal_end_ms: end_ms + sale_ms, offers: vec![], winner: None, ask: U128(0), paid: U128(0), bill: U128(0) });
+            }
             self.pools.insert(
                 id,
                 Pool {
@@ -1195,6 +1370,8 @@ impl Colony {
         require!(env::block_timestamp_ms() < pool.end_ms, "the pool window is closed");
         require!(pool.buyers.len() < MAX_BUYERS, "the pool is full");
         require!(!pool.buyers.contains(&agent), "already in this pool");
+        // R33: nobody sells to itself.
+        require!(self.sales.get(&q).map_or(true, |s| !s.offers.iter().any(|o| o.seller == agent)), "a seller cannot buy from its own sale");
         require!(amount == pool.pledge.0, "amount must equal the pledge");
         require!(rec.open < self.config.max_open, "too many open questions");
         // R29: a pledge is an open position.
@@ -1202,7 +1379,7 @@ impl Colony {
         self.agents.insert(agent.clone(), rec);
         pool.buyers.push(agent.clone());
         pool.held = U128(pool.held.0 + amount);
-        event("pool_join", json!({"q": q, "agent": agent, "pledge": pool.pledge}));
+        event("pool_join", &format!("\"q\":{q},\"agent\":\"{agent}\",\"pledge\":\"{}\"", pool.pledge.0));
         self.pools.insert(q, pool);
     }
 
@@ -1217,6 +1394,8 @@ impl Colony {
         require!(r.stake > 0 && r.stake <= self.config.max_stake, "stake is out of bounds");
         require!(r.receipt.len() <= MAX_RECEIPT_LEN, "receipt is too long");
         require!(rec.open < self.config.max_open, "too many open questions");
+        // R33: the writer must not profit by misleading the agents who paid it.
+        require!(self.sales.get(&r.q).map_or(true, |s| s.winner.as_ref() != Some(&agent)), "the writer cannot bet on its own briefing");
         let key = (r.q, agent.clone());
         let committed = self.commits.remove(&key).unwrap_or_else(|| env::panic_str("no commit to reveal"));
         require!(committed == commit_hash(r.q, &agent, r.belief, r.stake, &r.salt), "reveal does not match the commit");
@@ -1245,7 +1424,7 @@ impl Colony {
         question.locked = U128(question.locked.0 + lock);
         question.billed = U128(question.billed.0 + r.bill.0);
         self.questions.replace(r.q as u32, question);
-        event("reveal", json!({"q": r.q, "agent": agent, "belief": r.belief, "stake": r.stake, "bill": r.bill}));
+        event("reveal", &format!("\"q\":{},\"agent\":\"{agent}\",\"belief\":{},\"stake\":{},\"bill\":\"{}\"", r.q, r.belief, r.stake, r.bill.0));
     }
 
     fn finish_void(&mut self, q: u64, evidence: String) {
@@ -1255,7 +1434,7 @@ impl Colony {
         question.yes_won = None;
         question.evidence = Some(evidence);
         self.questions.replace(q as u32, question);
-        event("resolve", json!({"q": q, "yes_won": Value::Null}));
+        event("resolve", &format!("\"q\":{q},\"yes_won\":null"));
     }
 
     fn finish_resolution(&mut self, q: u64, yes: bool, evidence: Option<String>) {
@@ -1265,7 +1444,7 @@ impl Colony {
         question.yes_won = Some(yes);
         question.evidence = evidence;
         self.questions.replace(q as u32, question);
-        event("resolve", json!({"q": q, "yes_won": yes}));
+        event("resolve", &format!("\"q\":{q},\"yes_won\":{yes}"));
     }
 }
 

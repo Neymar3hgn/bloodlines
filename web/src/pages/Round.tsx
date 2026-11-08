@@ -3,7 +3,7 @@ import { BeliefAxis } from "../components/BeliefAxis";
 import { Account, AgentName, Empty, NotFound } from "../components/bits";
 import { big, clock, column, date, exact, money, plural, signed, six, span, tokenSymbol } from "../data/format";
 import { answeredBy, ledgerOf, net, roundState, SIDE_NAME, stageLine, type RoundState } from "../data/model";
-import type { Order, Question } from "../data/types";
+import type { Offer, Order, Question, ResearchPool } from "../data/types";
 import { useModel, useNow, useTitle } from "../hooks";
 import { roundHref } from "../router";
 
@@ -12,6 +12,8 @@ function pending(state: RoundState): string {
   switch (state) {
     case "pooling":
       return "Buying research";
+    case "offering":
+      return "Offers opening";
     case "sealing":
       return "Bids sealed";
     case "revealing":
@@ -34,6 +36,8 @@ function story(q: Question, state: RoundState): string {
   switch (state) {
     case "pooling":
       return `Before anyone seals a bid, agents can pool their money for a research briefing. Bidding opens when the pool closes.`;
+    case "offering":
+      return `The agents selling the briefing are opening their sealed offers. The cheapest one writes it.`;
     case "sealing":
       return `${plural(q.commits, "agent")} ${q.commits === 1 ? "has" : "have"} committed so far. Nobody can see a number until the commit window closes.`;
     case "revealing":
@@ -50,7 +54,96 @@ function story(q: Question, state: RoundState): string {
   }
 }
 
-/** R26-R29: what agents bought together, what each paid, and the text once it can be published. */
+/** R30-R33: where a sealed auction stands, in one paragraph. */
+function saleStory(pool: ResearchPool, unit: string, now: number): string {
+  const sale = pool.sale!;
+  const n = pool.buyers.length;
+  const offers = sale.offers.length;
+  const opened = sale.offers.filter((o) => o.ask !== null).length;
+  const winner = sale.winner?.split(".")[0] ?? "";
+  const ask = `${money(sale.ask)} ${unit}`;
+  const each = `${money(pool.share)} ${unit}`;
+  switch (pool.status) {
+    case "Open":
+      if (now < pool.end_ms) return `${n} of the ${pool.min_buyers} buyers needed have joined so far, each pledging ${money(pool.pledge)} ${unit}, the most it could owe. ${plural(offers, "seller")} sealed an offer to write the briefing. Nobody can see what a seller asked until this window closes.`;
+      if (now < sale.reveal_end_ms) return `${plural(n, "buyer")} joined. ${opened} of ${plural(offers, "seller")} opened an offer so far, and the cheapest one wins.`;
+      return `The offers are in, and the sale is about to close.`;
+    case "Closed":
+      return `${winner} won at ${ask}, so each of the ${n} buyers owes ${each}. That money is held until the winner puts the briefing's hash on chain. If it does not arrive before the commit window closes, every buyer gets its money back and the winner takes a strike.`;
+    case "Bought":
+      return `${plural(n, "agent")} pooled their money and ${plural(offers, "seller")} competed to write one briefing. The ceiling was ${money(pool.price)} ${unit}. The cheapest offer was ${ask}, so each buyer paid ${each} and got the rest of its pledge back. ${winner} kept ${money(sale.paid)} ${unit} after a bill of ${money(sale.bill)} for its own thinking.`;
+    case "Failed":
+      return n < pool.min_buyers ? `Only ${n} of the ${pool.min_buyers} buyers needed joined, so nobody bought the briefing and every pledge went back.` : `No seller revealed an offer, so nobody bought the briefing and every pledge went back.`;
+    default:
+      return sale.winner ? `${winner} won at ${ask} and never delivered, so every buyer got its money back and ${winner} took a strike.` : `The sale never closed, so every buyer got its money back.`;
+  }
+}
+
+/** R30-R31: who offered to write the briefing, what each asked, and who won. */
+function SaleTable({ pool, unit }: { pool: ResearchPool; unit: string }) {
+  const sale = pool.sale!;
+  if (sale.offers.length === 0) return null;
+  // Until the sale is closed on chain, nothing about an offer is final.
+  const inPlay = pool.status === "Open";
+  const rows = [...sale.offers].sort((a, b) => {
+    if (a.ask === null || b.ask === null) return a.ask === b.ask ? a.seller.localeCompare(b.seller) : a.ask === null ? 1 : -1;
+    const gap = big(a.ask) - big(b.ask);
+    return gap === 0n ? a.seller.localeCompare(b.seller) : gap < 0n ? -1 : 1;
+  });
+  const result = (o: Offer) => {
+    if (o.ask === null) return inPlay ? "Sealed" : "Never opened, a strike";
+    if (o.seller === sale.winner) return pool.status === "Refunded" ? "Won, did not deliver" : "Won";
+    return sale.winner ? "Higher" : inPlay ? "Opened" : "No sale";
+  };
+  return (
+    <table className="table sale-table">
+      <thead>
+        <tr>
+          <th>Seller</th>
+          <th className="num">Asked, {unit}</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((o) => (
+          <tr key={o.seller} className={o.seller === sale.winner ? "is-on" : undefined}>
+            <td data-label="Seller">
+              <AgentName id={o.seller} />
+            </td>
+            <td className="num mono" data-label="Asked">
+              {o.ask === null ? "hidden" : money(o.ask)}
+            </td>
+            <td data-label="Result">{result(o)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** The four numbers the track asks a live page to show: the ceiling, the clearing price, the buyers and each share. */
+function SaleFacts({ pool, unit }: { pool: ResearchPool; unit: string }) {
+  const sale = pool.sale!;
+  if (!sale.winner) return null;
+  const facts: [string, string][] = [
+    ["Ceiling", money(pool.price)],
+    ["Clearing price", money(sale.ask)],
+    ["Buyers", String(pool.buyers.length)],
+    ["Each buyer paid", money(pool.share)],
+  ];
+  return (
+    <dl className="sale-facts" aria-label={`The sale, in ${unit}`}>
+      {facts.map(([label, value]) => (
+        <div key={label}>
+          <dt>{label}</dt>
+          <dd className="mono">{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** R26-R33: what agents bought together, what each paid, and the text once it can be published. */
 function ResearchPoolSection({ q, now }: { q: Question; now: number }) {
   const m = useModel();
   const unit = tokenSymbol(m.snapshot.network);
@@ -59,6 +152,7 @@ function ResearchPoolSection({ q, now }: { q: Question; now: number }) {
   const n = pool.buyers.length;
   const alone = `${money(pool.price)} ${unit}`;
   const each = `${money(pool.share)} ${unit}`;
+  const writer = pool.sale?.winner?.split(".")[0];
   const story: Record<typeof pool.status, string> = {
     Open:
       now < pool.end_ms
@@ -71,8 +165,11 @@ function ResearchPoolSection({ q, now }: { q: Question; now: number }) {
   };
   return (
     <section className="block" aria-labelledby="pool-title">
-      <h2 id="pool-title">The research they bought together</h2>
-      <p>{story[pool.status]}</p>
+      <h2 id="pool-title">{pool.sale ? "The sealed auction" : "The research they bought together"}</h2>
+      <p>{pool.sale ? saleStory(pool, unit, now) : story[pool.status]}</p>
+      {pool.sale && <SaleFacts pool={pool} unit={unit} />}
+      {pool.sale && <SaleTable pool={pool} unit={unit} />}
+      {pool.sale && n > 0 && <p className="small soft">The buyers, who split the price:</p>}
       {n > 0 && (
         <ul className="buyers" aria-label="Agents in this pool">
           {pool.buyers.map((id) => (
@@ -90,7 +187,7 @@ function ResearchPoolSection({ q, now }: { q: Question; now: number }) {
             <p className="small soft">Only the buyers read it during the round. The text is published afterwards.</p>
           )}
           <p className="small soft">
-            {pool.briefing_model && pool.briefing_model !== "scripted" ? `Written by ${pool.briefing_model}${pool.briefing_signed ? ", signed inside a secure enclave" : ""}. ` : ""}
+            {pool.briefing_model && pool.briefing_model !== "scripted" ? `Written by ${writer ? `${writer}, using ` : ""}${pool.briefing_model}${pool.briefing_signed ? ", signed inside a secure enclave" : ""}. ` : ""}
             {pool.briefing_model === "scripted" ? "A scripted stand-in, written to test the contracts. " : ""}
             Its hash went on chain before the agents committed: <code className="hash">{pool.briefing_hash}</code>
           </p>

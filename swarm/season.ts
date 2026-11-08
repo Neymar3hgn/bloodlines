@@ -3,7 +3,7 @@
  *
  *   node swarm/season.ts --questions 12              scripted agents, no key needed
  *   NEARAI_API_KEY=... node swarm/season.ts --ai     real forecasts
- *   node swarm/season.ts --pools 3                   a research pool on every third round
+ *   node swarm/season.ts --pools 3                   a sealed sale on every third round (--offer-secs 0 for a fixed price)
  */
 import { readFileSync } from "node:fs";
 import * as c from "./colony.ts";
@@ -19,7 +19,8 @@ const count = Number(arg("questions", "12"));
 const offset = Number(arg("offset", "0"));
 const timing = { commitSecs: Number(arg("commit", "45")), revealSecs: Number(arg("reveal", "120")) };
 const poolEvery = Number(arg("pools", "0"));
-const poolSecs = Number(arg("pool-secs", "20"));
+const poolSecs = Number(arg("pool-secs", "45"));
+const offerSecs = Number(arg("offer-secs", "45"));
 const settings = defaults(ai);
 
 const questions: (RoundInput & { yes: boolean })[] = JSON.parse(readFileSync("data/questions.json", "utf8")).questions;
@@ -34,7 +35,7 @@ let played = 0;
 for (const q of questions.slice(offset, offset + count)) {
   const pooled = poolEvery > 0 && played % poolEvery === 0;
   if (played++ % 12 === 11) await refuel();
-  const id = await playRound(q, cfg, pooled ? { ...timing, poolSecs } : timing, settings);
+  const id = await playRound(q, cfg, pooled ? { ...timing, poolSecs, offerSecs } : timing, settings);
   if (id === null) continue;
   await c.resolveSealed(id, q.yes, c.sealFor(id, await c.getQuestion(id)));
   await finishRound(id, q.text, q.yes);

@@ -157,6 +157,8 @@ function GenomeTable({ agent, parent }: { agent: Agent; parent: Agent | undefine
     { name: "Shrink", note: "Below 1 hedges toward 50, above 1 sharpens", value: g.shrink.toFixed(2), was: p?.shrink.toFixed(2) },
     { name: "Size", note: "Share of its credits staked per question", value: pct(g.size), was: p ? pct(p.size) : undefined },
     { name: "Pools", note: "How likely it is to join a research pool", value: g.pool === undefined ? "50.0%, the default" : pct(g.pool), was: p ? (p.pool === undefined ? "50.0%, the default" : pct(p.pool)) : undefined },
+    { name: "Selling", note: "How keen it is to write a briefing for a pool", value: g.sell === undefined ? "50.0%, the default" : pct(g.sell), was: p ? (p.sell === undefined ? "50.0%, the default" : pct(p.sell)) : undefined },
+    { name: "Markup", note: "What it adds to its writing cost when it bids", value: g.markup === undefined ? "Set by its name" : pct(g.markup), was: p ? (p.markup === undefined ? "Set by its name" : pct(p.markup)) : undefined },
   ];
   const focus = Object.entries(g.focus);
   const narrow = focus.filter(([, v]) => v < 1);

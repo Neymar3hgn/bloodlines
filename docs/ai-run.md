@@ -16,7 +16,15 @@ is a decision about money, so it is never part of fixing a bug.
 
 ## What the first run showed
 
-Six rounds, rounds 24 to 29, cost $0.08 in total.
+Eight rounds cost $0.09 in total: rounds 24 to 29, then 34 and 42, which added sealed
+auctions.
+
+- In round 34 no seller's reveal landed inside a 20-second window, while the public RPC
+  was rate limiting this machine. All 8 buyers were refunded and the 5 sellers took a
+  strike, as the rules say. Reveal windows are now 45 seconds, and nothing else should
+  use the RPC during a round.
+- In round 42 the auction worked: five sealed offers, `tea` won at 0.010 against a 0.08
+  ceiling, and ten buyers paid 0.001 each.
 
 - Models that reason first spent all 1,200 tokens thinking and never answered. Forecasts
   now send `chat_template_kwargs` to turn reasoning off, which also cut the cost per
@@ -31,11 +39,11 @@ Six rounds, rounds 24 to 29, cost $0.08 in total.
 ## 1. One real round
 
 ```bash
-node swarm/season.ts --ai --questions 1 --offset 200 --pools 1
+node swarm/season.ts --ai --questions 1 --offset 212 --pools 1
 ```
 
-This round offers a research pool, so it buys one real briefing. `--offset 200` keeps
-the round away from the experiment's exam questions.
+This round runs a sealed auction, so one agent wins the right to write a real briefing.
+`--offset 212` keeps the round away from the questions already used.
 
 Real models behave differently from a mock, so look at three things before going further:
 
@@ -48,7 +56,7 @@ Real models behave differently from a mock, so look at three things before going
 ## 2. A few more rounds
 
 ```bash
-node swarm/season.ts --ai --questions 4 --offset 205 --pools 4
+node swarm/season.ts --ai --questions 4 --offset 213 --pools 4
 ```
 
 Then:

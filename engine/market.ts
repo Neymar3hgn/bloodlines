@@ -67,6 +67,20 @@ export const poolPledge = (price: bigint, minBuyers: number) => divideUp(price, 
 /** What each buyer really pays once the pool closes (R27). */
 export const poolShare = (price: bigint, buyers: number) => divideUp(price, BigInt(buyers));
 
+export interface Offer {
+  seller: string;
+  ask: bigint;
+}
+
+/** The winner of a sealed sale (R31): the lowest ask, and equal asks go to the lower account name. */
+export function winningOffer(offers: Offer[]): Offer | null {
+  let best: Offer | null = null;
+  for (const o of offers) {
+    if (!best || o.ask < best.ask || (o.ask === best.ask && o.seller < best.seller)) best = o;
+  }
+  return best;
+}
+
 /** Units an agent must lock for an order (R7). */
 export function lockFor(belief: number, stake: bigint): bigint {
   return stake * BigInt(Math.max(belief, 100 - belief)) * POINT_UNITS;

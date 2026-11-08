@@ -7,7 +7,7 @@
  */
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { clear, lockFor, poolPledge, poolShare, settle } from "../engine/market.ts";
+import { clear, lockFor, poolPledge, poolShare, settle, winningOffer } from "../engine/market.ts";
 import { eip191Signer } from "../swarm/llm.ts";
 
 const RPC = process.env.CLADE_RPC ?? "https://rpc.testnet.fastnear.com";
@@ -166,18 +166,40 @@ if (receipts > 0) check("Every signed answer matches its receipt on chain", rece
 // is the text whose hash went on chain before agents committed.
 const pools: any[] = [];
 for (let from = 0; from < questions.length; from += 50) pools.push(...(await view<any[]>(colony, "get_pools", { from, limit: 50 })));
+const sales = new Map<number, any>();
+for (let from = 0; from < questions.length; from += 50) for (const s of await view<any[]>(colony, "get_sales", { from, limit: 50 })) sales.set(s.q, s);
 const poolIsRight = (p: any) => {
   const n = p.buyers.length;
   const held = BigInt(p.held);
+  const sale = sales.get(p.q);
+  // R31: with a sale the buyers split the winning ask, not the ceiling.
+  const owed = sale?.winner ? BigInt(sale.ask) : BigInt(p.price);
   if (BigInt(p.pledge) !== poolPledge(BigInt(p.price), p.min_buyers)) return false;
   if (p.status === "Open") return held === BigInt(p.pledge) * BigInt(n);
-  if (p.status === "Closed") return held === BigInt(p.share) * BigInt(n) && BigInt(p.share) === poolShare(BigInt(p.price), n);
-  if (p.status === "Bought") return held === 0n && n >= p.min_buyers && BigInt(p.share) === poolShare(BigInt(p.price), n) && /^[0-9a-f]{64}$/.test(p.briefing_hash ?? "");
-  if (p.status === "Failed") return held === 0n && n < p.min_buyers;
+  if (p.status === "Closed") return held === BigInt(p.share) * BigInt(n) && BigInt(p.share) === poolShare(owed, n);
+  if (p.status === "Bought") return held === 0n && n >= p.min_buyers && BigInt(p.share) === poolShare(owed, n) && /^[0-9a-f]{64}$/.test(p.briefing_hash ?? "");
+  if (p.status === "Failed") return held === 0n && (n < p.min_buyers || (!!sale && !sale.winner));
   return held === 0n; // Refunded
 };
 const poolsOk = pools.filter(poolIsRight).length;
 if (pools.length) check("Every research pool charged what the rules say", poolsOk === pools.length, `${poolsOk} of ${pools.length}`);
+
+// R30-R33: the cheapest revealed offer won, and what the buyers paid went to the writer and its bill.
+const poolAt = new Map<number, any>(pools.map((p) => [p.q, p]));
+const saleIsRight = (s: any) => {
+  const p = poolAt.get(s.q);
+  const revealed = s.offers.filter((o: any) => o.ask !== null).map((o: any) => ({ seller: o.seller, ask: BigInt(o.ask) }));
+  if (revealed.some((o: any) => o.ask <= 0n || o.ask > BigInt(p.price))) return false;
+  if (s.offers.some((o: any) => p.buyers.includes(o.seller))) return false;
+  if (!s.winner) return p.status !== "Bought" && p.status !== "Closed";
+  const best = winningOffer(revealed);
+  if (best?.seller !== s.winner || best.ask !== BigInt(s.ask)) return false;
+  return p.status === "Bought" ? BigInt(s.paid) + BigInt(s.bill) === BigInt(p.share) * BigInt(p.buyers.length) : BigInt(s.paid) === 0n;
+};
+if (sales.size) {
+  const salesOk = [...sales.values()].filter(saleIsRight).length;
+  check("Every sealed sale went to the cheapest offer, and the money adds up", salesOk === sales.size, `${salesOk} of ${sales.size}`);
+}
 const bought = pools.filter((p) => p.status === "Bought");
 if (bought.length) {
   const textsOk = bought.filter((p) => briefings[p.q] && sha256(briefings[p.q].text) === p.briefing_hash).length;

@@ -34,6 +34,7 @@ const realRounds = snapshot.questions.filter((q) => q.status === "Settled" && q.
 const answeredByModels = (q) => Object.values(q.thoughts ?? {}).some((t) => t.reasoning);
 const round = [...realRounds].sort((a, b) => answeredByModels(b) - answeredByModels(a) || b.reveals - a.reveals || b.id - a.id)[0];
 const pooled = [...realRounds].reverse().find((q) => q.research?.status === "Bought" && q.research.buyers.length >= 4);
+const sold = [...realRounds].reverse().find((q) => q.research?.status === "Bought" && q.research.sale?.winner);
 const dead = snapshot.agents.find((a) => a.status === "Dead");
 const child = [...snapshot.agents].filter((a) => a.generation > 0).sort((a, b) => b.generation - a.generation)[0];
 const scripted = snapshot.mode === "scripted";
@@ -150,8 +151,16 @@ if (round) {
   await wait(3500);
 }
 
-// 4. Buying together
-if (pooled) {
+// 4. Buying together, and the sealed auction
+if (sold) {
+  const { sale, buyers, share, price } = sold.research;
+  await go(`/round/${sold.id}`);
+  await toHeading("The sealed auction");
+  await caption(`${buyers.length} agents pooled money for one briefing, and ${sale.offers.length} others bid in secret to write it.`);
+  await wait(5500);
+  await caption(`The cheapest offer won, at ${(Number(sale.ask) / 1e6).toFixed(3)} under a ${(Number(price) / 1e6).toFixed(2)} ceiling. Each buyer paid only ${(Number(share) / 1e6).toFixed(4)}.`);
+  await wait(5500);
+} else if (pooled) {
   const each = Number(pooled.research.share) / 1e6;
   const alone = Number(pooled.research.price) / 1e6;
   await go(`/round/${pooled.id}`);

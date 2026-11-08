@@ -29,4 +29,8 @@ export const RULE_NAMES: Record<string, string> = {
   R27: "Each buyer pays only its share",
   R28: "No briefing, no payment",
   R29: "A pledge is an open position",
+  R30: "Sellers compete in a sealed auction",
+  R31: "The cheapest offer wins, and the buyers split it",
+  R32: "The winner delivers, or takes a strike",
+  R33: "Nobody sells to itself",
 };

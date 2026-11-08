@@ -24,12 +24,13 @@ const base = (questions: Question[]): Snapshot =>
   }) as unknown as Snapshot;
 
 /** Answers view calls from fixed rows, and records each one. */
-function fakeChain(rows: { questions?: object[]; pools?: object[]; orders?: Record<number, object[]>; agents?: [string, object][] }) {
+function fakeChain(rows: { questions?: object[]; pools?: object[]; sales?: object[]; orders?: Record<number, object[]>; agents?: [string, object][] }) {
   const calls: string[] = [];
   const read: Read = async <T,>(account: string, method: string, args: any = {}) => {
     calls.push(method);
     if (method === "get_questions") return (rows.questions ?? []).filter((q: any) => q.id >= args.from) as T;
     if (method === "get_pools") return (rows.pools ?? []).filter((p: any) => p.q >= args.from) as T;
+    if (method === "get_sales") return (rows.sales ?? []).filter((s: any) => s.q >= args.from) as T;
     if (method === "get_orders") return (rows.orders?.[args.q] ?? []) as T;
     if (method === "get_agents") return (args.from === 0 ? (rows.agents ?? []) : []) as T;
     if (method === "mt_balance_of") return (args.account_id === "tr" ? "999" : "777") as T;
@@ -37,6 +38,21 @@ function fakeChain(rows: { questions?: object[]; pools?: object[]; orders?: Reco
   };
   return { read, calls };
 }
+
+test("a new sealed offer reaches the page, and a round with no pool never asks for sales", async () => {
+  const pool = { q: 0, buyers: [], status: "Open" };
+  const sale = { q: 0, offers: [{ seller: "s.c", seal: "ab", ask: null }], winner: null, paid: "0" };
+  const s = base([{ ...round(0), status: "Open", research: { ...pool, sale: { ...sale, offers: [] } } } as never]);
+  const chain = fakeChain({ questions: [{ ...round(0), status: "Open" }], pools: [pool], sales: [sale] });
+  const next = await newerThan(s, s.stats, chain.read);
+  assert.notEqual(next, s);
+  assert.equal(next.questions[0].research?.sale?.offers.length, 1);
+
+  const none = base([{ ...round(0), status: "Open" }]);
+  const quiet = fakeChain({ questions: [{ ...round(0), status: "Open" }] });
+  await newerThan(none, none.stats, quiet.read);
+  assert.ok(!quiet.calls.includes("get_sales"));
+});
 
 test("a quiet colony costs nothing and redraws nothing", async () => {
   const s = base([round(0)]);

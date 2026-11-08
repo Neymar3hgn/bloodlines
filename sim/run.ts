@@ -1,5 +1,6 @@
 /** Runs the scripted colony with no language model calls. Usage: node sim/run.ts [--seeds N]. The published numbers use 8 seeds. */
 import { writeFileSync } from "node:fs";
+import { AUCTION_DEFAULTS, runAuction } from "./auction.ts";
 import { blindLieAudit, lyingAudit, pumpAttack } from "./gaming.ts";
 import { DEFAULTS, runColony, type Bucket } from "./world.ts";
 
@@ -106,6 +107,27 @@ for (const p of pools) {
   console.log(` ${p.label.padEnd(11)}  ${p.gene.toFixed(3).padStart(10)}  ${p.buyers.toFixed(1).padStart(7)}  ${f(p.withBriefing, 5).padStart(20)}  ${f(p.withoutIt, 5).padStart(23)}`);
 }
 
+// R30-R33: the same market with more and more sellers.
+const auctionSeeds = Math.max(seeds, 8) * 5;
+const markets = [1, 2, 3, 5].map((sellers) => {
+  const rs = Array.from({ length: auctionSeeds }, (_, i) => runAuction({ ...AUCTION_DEFAULTS, sellers, seed: i + 1 }));
+  return {
+    sellers,
+    price: mean(rs.map((r) => r.latePrice)),
+    buyers: mean(rs.map((r) => r.lateBuyers)),
+    share: mean(rs.map((r) => r.lateShare)),
+    sold: mean(rs.map((r) => r.counts.bought / r.rounds.length)),
+    conservationErrors: rs.reduce((t, r) => t + r.conservationErrors, 0),
+  };
+});
+const fullMarket = runAuction(AUCTION_DEFAULTS);
+console.log(`\nSealed sale: ${AUCTION_DEFAULTS.buyers} scripted buyers, ${AUCTION_DEFAULTS.rounds} rounds, ${auctionSeeds} seeds, a ceiling of ${AUCTION_DEFAULTS.ceiling}, last third of the rounds`);
+console.log(" sellers   clearing price   buyers   each buyer pays   rounds sold");
+for (const m of markets) {
+  console.log(`${String(m.sellers).padStart(8)}   ${m.price.toFixed(0).padStart(14)}  ${m.buyers.toFixed(1).padStart(7)}  ${m.share.toFixed(0).padStart(16)}  ${(m.sold * 100).toFixed(1).padStart(11)}%`);
+}
+console.log("Money conservation errors:", markets.reduce((t, m) => t + m.conservationErrors, 0));
+
 const replacer = (_k: string, v: unknown) => (typeof v === "bigint" ? v.toString() : v);
 // A short run prints its numbers but leaves the published report alone.
 if (seeds >= 8) writeFileSync(
@@ -121,6 +143,16 @@ if (seeds >= 8) writeFileSync(
       habits,
       pumps,
       pools: { every: POOL_EVERY, price: DEFAULTS.poolPrice, seeds: poolRuns, cases: pools },
+      auction: {
+        buyers: AUCTION_DEFAULTS.buyers,
+        rounds: AUCTION_DEFAULTS.rounds,
+        ceiling: AUCTION_DEFAULTS.ceiling,
+        pledge: fullMarket.pledge,
+        seeds: auctionSeeds,
+        markets,
+        standings: fullMarket.sellers,
+        buckets: fullMarket.buckets,
+      },
     },
     replacer,
     1,

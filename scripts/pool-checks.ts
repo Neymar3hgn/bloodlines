@@ -91,7 +91,7 @@ export async function poolChecks({ check, tag, a, b, d, late }: PoolTest) {
 
   const text = `A test briefing, ${tag}.`;
   const hash = c.sha256Hex(text);
-  err = await rejects(() => account(colony).callFunction({ contractId: colony, methodName: "post_briefing", args: { q: qp, hash }, gas: 60_000_000_000_000n } as never));
+  err = await rejects(() => account(colony).callFunction({ contractId: colony, methodName: "post_briefing", args: { q: qp, hash }, gas: 10_000_000_000_000n } as never));
   check("R28", "only the keeper can post a briefing", /only the keeper/.test(err ?? ""), (err ?? "").slice(0, 80));
   err = await rejects(() => c.postBriefing(qp, "not a hash"));
   check("R28", "a briefing needs a real hash", !!err && (await c.getPool(qp)).status === "Closed", (err ?? "").slice(0, 80));
@@ -130,7 +130,7 @@ export async function poolChecks({ check, tag, a, b, d, late }: PoolTest) {
   check("R28", "a briefing cannot arrive after the commit window", /too late/.test(err ?? ""), (err ?? "").slice(0, 80));
   const refundBefore = BigInt(await c.getClaimable(a));
   // The colony's own account, to show this needs neither the keeper nor a buyer.
-  await account(colony).callFunction({ contractId: colony, methodName: "refund_pool", args: { q: qn }, gas: 100_000_000_000_000n, waitUntil: "EXECUTED_OPTIMISTIC" } as never);
+  await account(colony).callFunction({ contractId: colony, methodName: "refund_pool", args: { q: qn }, gas: 25_000_000_000_000n, waitUntil: "EXECUTED_OPTIMISTIC" } as never);
   pool = await c.poolAfter(qn, "Closed");
   check("R28", "with no briefing, anyone can trigger a full refund", pool.status === "Refunded" && pool.held === "0" && BigInt(await c.getClaimable(a)) === refundBefore + 30_000n);
 

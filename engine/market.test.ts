@@ -9,6 +9,7 @@ import {
   poolPledge,
   poolShare,
   reputation,
+  winningOffer,
   settle,
   SHARE_UNITS,
   type Order,
@@ -49,6 +50,24 @@ test("rule_27 a pool always collects the full price, and never more than a pledg
       }
     }
   }
+});
+
+test("rule_31 the cheapest offer wins, and buyers split what it asked", () => {
+  const offers = [
+    { seller: "b.near", ask: 30_000n },
+    { seller: "c.near", ask: 12_000n },
+    { seller: "a.near", ask: 45_000n },
+  ];
+  assert.deepEqual(winningOffer(offers), offers[1]);
+  assert.equal(poolShare(winningOffer(offers)!.ask, 8), 1_500n);
+  assert.equal(winningOffer([]), null);
+});
+
+test("rule_31 equal asks go to the lower account name, in any order", () => {
+  const a = { seller: "a.near", ask: 5n };
+  const b = { seller: "b.near", ask: 5n };
+  assert.equal(winningOffer([a, b]), a);
+  assert.equal(winningOffer([b, a]), a);
 });
 
 test("rule_07 lock covers the worst case price", () => {

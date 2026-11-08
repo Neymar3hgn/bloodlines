@@ -20,10 +20,15 @@ export interface Genome {
   focus: Record<string, number>;
   /** R26: how likely the agent is to join a research pool. Agents born before pools have none. */
   pool?: number;
+  /** R30: how keen the agent is to sell a briefing. Agents born before sales have none. */
+  sell?: number;
+  /** R30: what the agent adds to its writing cost, as a fraction of that cost. */
+  markup?: number;
 }
 
 /** What an agent with no pool gene does. */
 export const DEFAULT_POOL_GENE = 0.5;
+export const DEFAULT_SELL_GENE = 0.5;
 
 export const CATEGORIES = ["sports", "politics", "world", "economy", "crypto", "tech", "other"];
 
@@ -64,6 +69,23 @@ export function joins(g: Genome, agent: string, questionId: string): boolean {
   return h.readUInt32LE(0) / 2 ** 32 < (g.pool ?? DEFAULT_POOL_GENE);
 }
 
+const draw = (text: string) => createHash("sha256").update(text).digest().readUInt32LE(0) / 2 ** 32;
+
+/** R30: the keenest agents offer to write this briefing. Stable, so a run can be replayed. */
+export function pickSellers<T extends { id: string; genome: Genome }>(agents: T[], questionId: string, count: number): T[] {
+  const reluctance = new Map(agents.map((a) => [a.id, draw(`sell:${a.id}:${questionId}`) / Math.max(0.01, a.genome.sell ?? DEFAULT_SELL_GENE)]));
+  return [...agents].sort((a, b) => reluctance.get(a.id)! - reluctance.get(b.id)!).slice(0, count);
+}
+
+/** Agents born before sales have no markup gene, so theirs comes from their name and never changes. */
+export const markupOf = (g: Genome) => g.markup ?? 0.2 + draw(`markup:${g.name}`) * 1.2;
+
+/** R30: what an agent charges for a briefing: its cost plus its markup, up to the pool's ceiling. */
+export function askFor(g: Genome, cost: bigint, ceiling: bigint): bigint {
+  const ask = BigInt(Math.max(1, Math.ceil(Number(cost) * (1 + markupOf(g)))));
+  return ask > ceiling ? ceiling : ask;
+}
+
 export type Rng = () => number;
 
 export function gaussian(r: Rng): number {
@@ -82,6 +104,8 @@ export function mutateNumbers(g: Genome, r: Rng, models: string[]): Genome {
     shrink: clamp(g.shrink * Math.exp(0.12 * gaussian(r)), 0.35, 1.6),
     size: clamp(g.size * Math.exp(0.15 * gaussian(r)), 0.02, 0.5),
     pool: clamp((g.pool ?? DEFAULT_POOL_GENE) + 0.08 * gaussian(r), 0, 1),
+    sell: clamp((g.sell ?? DEFAULT_SELL_GENE) + 0.08 * gaussian(r), 0, 1),
+    markup: clamp(markupOf(g) * Math.exp(0.15 * gaussian(r)), 0.05, 3),
     focus,
     // A rare mutation moves a lineage to a different model.
     model: r() < 0.08 ? models[Math.floor(r() * models.length)] : g.model,

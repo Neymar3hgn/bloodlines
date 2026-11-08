@@ -7,7 +7,8 @@
  *   node swarm/live.ts resolve                      post results that have come in
  *
  * Add --ai for real forecasts. Without it, scripted agents guess with no signal.
- * Add --pool 60 to offer a research pool on each question, open for 60 seconds.
+ * Add --pool 60 to run a sealed sale for a briefing on each question, with buyers joining
+ * for 60 seconds and sellers then revealing for 45 (--offer changes that, 0 means a fixed price).
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import * as c from "./colony.ts";
@@ -83,7 +84,7 @@ async function open(count: number, hours: number, ai: boolean) {
     const q = await playRound(
       { id: String(m.id), text, detail: String(m.description ?? "").replace(/\s+/g, " ").slice(0, 700), category: categorize(text), asOf: today, source: source.slice(0, 256) },
       cfg,
-      { commitSecs: Number(arg("commit", "45")), revealSecs: Number(arg("reveal", "120")), poolSecs: Number(arg("pool", "0")) || undefined },
+      { commitSecs: Number(arg("commit", "45")), revealSecs: Number(arg("reveal", "120")), poolSecs: Number(arg("pool", "0")) || undefined, offerSecs: Number(arg("offer", "45")) },
       settings,
     );
     if (q !== null) {

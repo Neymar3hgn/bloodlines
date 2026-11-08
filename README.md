@@ -32,12 +32,13 @@ names are the family tree**, and that comes straight from NEAR's account model.
 | The track asks for | In Bloodlines |
 |---|---|
 | Multi-agent systems | Up to 32 agents with their own money and strategies, and no central planner. What the swarm answers, and who survives, comes out of how they trade |
-| NEAR Intents | Each agent's capital sits in its own Intents balance. Sealed reveals, pool pledges and births are signed intents, relayed in batches, all or nothing |
+| NEAR Intents | Each agent's capital sits in its own Intents balance. Sealed reveals, pool pledges, seller offers and births are signed intents, relayed in batches. The winning bid settles on the Intents ledger |
 | Sub-accounts | Every agent is a sub-account of its parent, so each action on chain traces back to one agent and its whole family |
 | Coordination markets and bidding | Sealed bids, a commit and reveal round, one clearing price. [R6 to R11](RULES.md) |
-| Collective purchasing | Agents pool money for a research briefing, and each pays only its share. [R26 to R29](RULES.md) |
+| Collective purchasing | Buyer agents pool their demand for one research briefing, and each pays only its share. [R26 to R29](RULES.md) |
+| A sealed-bid round against seller agents | Other agents seal what they would charge to write the briefing, then reveal. The cheapest offer wins, ties go to the lower name, and the winner is paid only when it delivers. [R30 to R33](RULES.md), with a [sequence diagram](docs/architecture.md#a-round-with-a-sealed-auction) |
 | Economies that emerge between agents | Birth, death and inheritance decide which strategies last. The colony even finds its own size |
-| Rules first, a simulation with no LLM calls, a live page | [RULES.md](RULES.md), `npm run sim`, and a site that follows rounds from the chain as they happen |
+| Rules first, a simulation with no LLM calls, a live page | [RULES.md](RULES.md), `npm run sim:auction` for 20 scripted buyers against 5 scripted sellers, and a site that follows rounds, bids, the clearing price and who got what from the chain as it happens |
 
 ## Try it
 
@@ -50,20 +51,22 @@ npm ci
 
 | Do | You should see |
 |---|---|
-| `npm test` | `pass 80`, including 20,000 random order books that all balance exactly, and the whole AI path against a local mock |
+| `npm test` | `pass 91`, including 20,000 random order books that all balance exactly, and the whole AI path against a local mock |
 | `npm run sim` | A scripted colony with no AI calls, in seconds. Survivors beat founders on an exam, and lying loses money. Add `-- --seeds 8` for the published numbers |
-| `npm run verify` | The whole colony rebuilt from public chain data, including every signed model answer: `13 of 13 checks pass` |
+| `npm run sim:auction` | The sealed market on its own: 20 scripted buyers, 5 scripted sellers and no model calls, round by round, ending with who got what |
+| `npm run verify` | The whole colony rebuilt from public chain data, including every signed model answer: `14 of 14 checks pass` |
 | `cd contracts && cargo test -p clade-core` | `9 passed`, including 2,000 vectors shared with the TypeScript engine (needs Rust 1.95) |
 | `npm run mcp` | An MCP server that lets any AI agent read the swarm. See [below](#for-near-builders) |
 | `cd web && npm ci && npm run dev` | The site on your own machine, following the colony live from the chain |
 | `npm run e2e` | The rules tested on a live network, with real rejected attacks. This one needs its own funded test colony. The last run is in [data/e2e-report.json](data/e2e-report.json) |
-| `npm run e2e:pools` | Just the research pool checks, on the public colony, for almost no NEAR. The last run is in [data/e2e-pools-report.json](data/e2e-pools-report.json) |
+| `npm run e2e:pools` | The research pool and sealed sale checks, on the public colony, for almost no NEAR. The last run is in [data/e2e-pools-report.json](data/e2e-pools-report.json) |
 
 ## How a round works
 
 1. **Ask.** Someone pays a bounty to open a yes or no question.
-2. **Buy together, if offered.** Agents can pool money for one research briefing from
-   a stronger model. Each pays only its share. If too few join, or the briefing never
+2. **Buy together, if offered.** Buyer agents pool money for one research briefing, and
+   seller agents bid in a sealed auction to write it. The cheapest offer wins, and each
+   buyer pays only its share. If too few join, no offer is opened, or the briefing never
    arrives, everyone gets their money back.
 3. **Seal.** Each agent thinks, paying for its own inference, then commits a hash of
    one probability and one stake. Nobody can copy anybody.
@@ -97,11 +100,11 @@ below the floor.
 | Contracts, agents, births, deaths, sealed rounds, Intents settlement | **Real**, live on NEAR testnet |
 | The Intents contract | **Real code**: a testnet copy with the same code hash as mainnet `intents.near` |
 | Money | Test USD on testnet. No real value |
-| The rounds now on chain | **Mixed.** 19 used scripted agents to test the contracts, and 6 used real models. The site labels each one |
-| Real AI forecasts | **Real, in 6 rounds on testnet**, rounds 24 to 29: 51 forecasts from 4 NEAR AI Cloud models, for $0.08 |
+| The rounds now on chain | **Mixed.** 19 used scripted agents to test the contracts, and 8 used real models. The site labels each one |
+| Real AI forecasts | **Real, in 8 rounds on testnet**, rounds 24 to 29, 34 and 42: 77 forecasts from 4 NEAR AI Cloud models, for $0.09 |
 | The go/no-go experiment | **Built and tested against a mock, not run.** It costs about $5 to $8 of NEAR AI credit. `swarm/experiment.ts` |
 | Live questions on real events | **Built and tested.** `swarm/live.ts` |
-| Research pools | **Real on testnet.** 22 checks passed on the public colony, and agents bought 2 real briefings. Whether a briefing improves a forecast has not been measured |
+| Research pools and sealed auctions | **Real on testnet.** 54 checks passed on the public colony, agents bought 2 real briefings at a fixed price, and one more through a real sealed auction. Whether a briefing improves a forecast has not been measured |
 | Agent Market listing | **Built and tested against a mock, not listed.** It needs an account. [Guide](docs/agent-market.md) |
 | Simulator results | **Simulation.** They show the mechanism works, not that real AI improves |
 
@@ -115,8 +118,9 @@ From a live network and a simulation. Both can be re-run from this repo.
   failure was the test's own account running out of NEAR for gas, not a rule. The test
   is fixed, but a full rerun needs about 4.5 NEAR for an hour, so it has not run again.
   [Report](data/e2e-report.json)
-- After the public colony was upgraded for research pools, 22 more checks ran there,
-  including rejected attacks on the pools, and all 22 passed. [Report](data/e2e-pools-report.json)
+- After the public colony was upgraded for research pools and sealed auctions, 54 more
+  checks ran there, including rejected attacks, and all 54 passed. Reports for the
+  [pools](data/e2e-pools-report.json) and the [sales](data/e2e-sales-report.json).
 - An agent's account really is deleted, and its money reaches its parent.
 - **A child keeps running and trading after its parent's account is deleted.** NEAR's
   docs do not say this. Bloodlines's tests check it.
@@ -125,19 +129,27 @@ From a live network and a simulation. Both can be re-run from this repo.
 - We attacked our own oracle: a question naming an agent's `die` method now does
   nothing. [The bug and the fix](docs/security.md).
 
-**On real models**, 6 rounds on the public colony, for $0.08 of NEAR AI credit:
+**On real models**, 8 rounds on the public colony, for $0.09 of NEAR AI credit:
 
-- 51 forecasts went on chain, and every signed answer matches its receipt. 43 were signed
-  inside the model's own enclave. The 8 from Kimi were signed by NEAR AI's gateway, which
-  proves less.
+- 77 forecasts went on chain, and every signed answer matches its receipt. Of the 75
+  signed, 60 were signed inside the model's own enclave. The other 15 were signed by NEAR
+  AI's gateway, which proves less.
+- **A real sealed auction, round 42.** 10 agents pooled money for one briefing, and 5
+  others sealed offers to write it. `tea` won at 0.010 test dollars under a 0.08 ceiling,
+  against offers of 0.013 to 0.033. Each buyer paid 0.001. `tea` wrote it with Qwen3.8
+  inside an enclave and kept 0.007 after a 0.003 bill for its own thinking.
 - Agents bought 2 real briefings together: 10 agents paid 0.008 each, and 8 agents paid
   0.01 each, instead of 0.08 alone. `z-ai/glm-5.3` wrote them, signed by the gateway.
-- **What broke.** Models that reason first used up all 1,200 tokens before answering, so
+- **What broke first.** The first real sale, round 34, failed: no seller's reveal landed
+  inside a 20-second window, while the public RPC was rate limiting this machine. The
+  rules did their job. All 8 buyers got their money back and the 5 sellers took a strike.
+  Windows are now 45 seconds.
+- **What else broke.** Models that reason first used up all 1,200 tokens before answering, so
   in the first 4 rounds many agents placed no bid. Turning reasoning off, with NEAR AI's
   `chat_template_kwargs`, fixed it and cut the cost per forecast from about $0.0015 to
   $0.0002. `levanto/sage-2` is a decision model that refuses chat calls, so its 3 agents
   sit out.
-- Six rounds are far too few to say anything about accuracy, so we do not. Whether
+- Eight rounds are far too few to say anything about accuracy, so we do not. Whether
   evolution improves real forecasts is **not shown**: that takes the full experiment.
 
 **In the simulator**, with 25 founders over 1,200 questions and 8 seeds:
@@ -154,6 +166,9 @@ From a live network and a simulation. Both can be re-run from this repo.
   every buyer reads the same text. The habit of buying started near 0.5 and ended at
   0.44 with good briefings and 0.23 with misleading ones, over 40 seeds. It did not rise
   even with good briefings, so buying together is not a free win.
+- In the sealed market, with 20 scripted buyers and no model calls, a lone seller climbed
+  to the 40,000 ceiling. Five competing sellers held the price near 7,700, and each buyer
+  paid about 459 instead of 2,732, over 40 seeds. Every unit of money was accounted for.
 
 **A finding we did not plan:** the colony has a natural size. Bills go out and
 bounties come in, so it can feed about `bounty ÷ cost of one forecast` agents. Set
@@ -167,7 +182,7 @@ Things in this repo anyone can use:
 |---|---|
 | **The swarm as an oracle.** Any contract can ask a question and be called back with the answer | `on_clade_answer` in [contracts/asker](contracts/asker), 625 bytes |
 | **Self-resolving questions.** Resolved by reading a NEAR contract, with nobody trusted | `Resolver::OnChain` in [contracts/colony](contracts/colony) |
-| **Group buying on Intents.** Signed pledges, each buyer pays only its share, and automatic refunds if too few join or nothing arrives | `handle_join`, `close_pool`, `refund_pool` in [contracts/colony](contracts/colony), R26 to R29 |
+| **Group buying on Intents, with a sealed auction.** Signed pledges, sealed offers from competing sellers, each buyer pays only its share of the winning bid, and automatic refunds if too few join or nothing arrives | `handle_join`, `seal_offer`, `reveal_offer`, `close_pool`, `deliver`, `refund_pool` in [contracts/colony](contracts/colony), R26 to R33 |
 | **An MCP server** for reading the swarm from any AI agent | [tools/bloodlines-mcp.ts](tools/bloodlines-mcp.ts) |
 | **A worker that lists the swarm on Agent Market**, so buyers can hire it by the job | [docs/agent-market.md](docs/agent-market.md) |
 | **A guide to multi-signer Intents batches**, which NEAR's docs do not cover, from the Verifier's source | [docs/intents-batches.md](docs/intents-batches.md) |
@@ -190,7 +205,7 @@ npm run build              # needs Rust 1.95 and Binaryen
 CLADE_ROOT=yourname.testnet npm run deploy
 npm run season -- --questions 12              # scripted agents
 NEARAI_API_KEY=... npm run season -- --ai     # real forecasts
-npm run season -- --questions 12 --pools 3    # a research pool on every third round
+npm run season -- --questions 12 --pools 3    # a sealed auction for a briefing on every third round
 npm run snapshot
 ```
 
@@ -216,9 +231,11 @@ node swarm/live.ts resolve
 - The chain checks a briefing's hash, not its quality, and keeping the text from
   non-buyers during a round is the keeper's promise. Agents judge a briefing only by
   whether buying it pays.
-- A pool buys from one seller at a fixed price, not from competing sellers. A briefing
-  is a stronger model's analysis of the question, with no web access, so it cannot
+- A briefing is a model's analysis of the question, with no web access, so it cannot
   bring in news.
+- Sellers bid on what writing costs them. Nothing yet rewards a better briefing with a
+  higher price, because the chain cannot judge quality. Buyers can only learn from
+  whether buying pays.
 - Stablecoin payments from any chain are designed, not yet built.
 - See [docs/security.md](docs/security.md) for everything found, fixed and still open.
 

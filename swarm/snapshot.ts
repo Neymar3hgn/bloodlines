@@ -27,28 +27,25 @@ function thoughtsOn(id: number) {
 }
 
 /** R28: a pool as the chain has it, plus its briefing once the agents can no longer use it. */
-function researchOn(q: any, pool: any) {
+function researchOn(q: any, pool: any, sale: any) {
   if (!pool) return null;
   const written = briefings[q.id];
   const published = written && Date.now() > q.commit_end_ms;
-  return { ...pool, briefing: published ? written.text : null, briefing_model: published ? written.model : null, briefing_signed: published ? (written.tee?.verified ?? false) : false };
+  return { ...pool, sale: sale ?? null, briefing: published ? written.text : null, briefing_model: published ? written.model : null, briefing_signed: published ? (written.tee?.verified ?? false) : false };
 }
 
 /**
- * The last full on-chain test run, plus the research pool checks, which ran later on
- * the public colony. Each part keeps its own colony and date.
+ * The last full on-chain test run, plus the research pool and sealed sale checks, which
+ * ran later on the public colony.
  */
 function testReport() {
   const full = read<any>("data/e2e-report.json", null);
-  const pools = read<any>("data/e2e-pools-report.json", null);
-  if (!full || !pools) return full ?? pools;
-  return {
-    ...full,
-    passed: full.passed + pools.passed,
-    total: full.total + pools.total,
-    results: [...full.results, ...pools.results],
-    later: { colony: pools.colony, at: pools.at, passed: pools.passed, total: pools.total },
-  };
+  const later = [read<any>("data/e2e-pools-report.json", null), read<any>("data/e2e-sales-report.json", null)].filter(Boolean);
+  if (!full || later.length === 0) return full ?? later[0] ?? null;
+  const passed = later.reduce((t, r) => t + r.passed, 0);
+  const total = later.reduce((t, r) => t + r.total, 0);
+  const newest = later.map((r) => r.at).sort().at(-1);
+  return { ...full, passed: full.passed + passed, total: full.total + total, results: [...full.results, ...later.flatMap((r) => r.results)], later: { colony: later[0].colony, at: newest, passed, total } };
 }
 
 async function allAgents() {
@@ -78,7 +75,14 @@ async function allPools() {
   return new Map(rows.map((p) => [p.q, p]));
 }
 
-const [config, stats, agents, questions, pools] = await Promise.all([view<any>(colony, "get_config"), c.getStats(), allAgents(), allQuestions(), allPools()]);
+async function allSales() {
+  const rows: any[] = [];
+  const { questions: count } = await c.getStats();
+  for (let from = 0; from < count; from += 50) rows.push(...(await c.getSales(from, 50)));
+  return new Map(rows.map((s) => [s.q, s]));
+}
+
+const [config, stats, agents, questions, pools, sales] = await Promise.all([view<any>(colony, "get_config"), c.getStats(), allAgents(), allQuestions(), allPools(), allSales()]);
 
 const credits = await inPool(agents, 3, ([id, a]) => (a.status === "Dead" ? Promise.resolve(0n) : c.creditsOf(id)));
 const reputations = await inPool(agents, 3, ([id]) => c.getReputation(id));
@@ -109,7 +113,7 @@ const snapshot = {
     label: id.split(".")[0],
     death: a.status === "Dead" ? { balance: a.final_credits, heir: a.heir } : null,
   })),
-  questions: questions.map((q, i) => ({ ...q, orders: orders[i], thoughts: thoughtsOn(q.id), research: researchOn(q, pools.get(q.id)) })),
+  questions: questions.map((q, i) => ({ ...q, orders: orders[i], thoughts: thoughtsOn(q.id), research: researchOn(q, pools.get(q.id), sales.get(q.id)) })),
   e2e: testReport(),
   sim: read("data/sim-report.json", null),
   experiment: read("data/experiment.json", null),

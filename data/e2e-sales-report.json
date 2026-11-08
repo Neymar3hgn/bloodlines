@@ -1,0 +1,203 @@
+{
+ "colony": "s1.clade.testnet",
+ "verifier": "verifier.tidepool-sandbox.testnet",
+ "network": "testnet",
+ "at": "2026-11-08T09:59:06.028Z",
+ "passed": 32,
+ "total": 32,
+ "results": [
+  {
+   "rule": "R30",
+   "claim": "a pool can run a sealed sale, with reveals after the pool window",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R30",
+   "claim": "the commit window starts after the reveals",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R30",
+   "claim": "an account that is not an agent cannot offer",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R30",
+   "claim": "sealed offers are on chain with their asks hidden",
+   "ok": true,
+   "detail": "4 offers"
+  },
+  {
+   "rule": "R33",
+   "claim": "a sealed offer is an open position",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R30",
+   "claim": "a seller cannot seal twice",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R33",
+   "claim": "a buyer cannot offer in its own pool",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R33",
+   "claim": "a seller cannot buy from its own sale, and is refunded",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R30",
+   "claim": "an offer cannot be revealed while sealing is open",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R33",
+   "claim": "a seller with an offer cannot be reaped",
+   "ok": true,
+   "detail": "Smart contract panicked: agent has open positions"
+  },
+  {
+   "rule": "R30",
+   "claim": "only the Intents contract can speak for a seller",
+   "ok": true,
+   "detail": "Smart contract panicked: only the Intents contract can authorize"
+  },
+  {
+   "rule": "R31",
+   "claim": "a sale cannot close while offers can still be revealed",
+   "ok": true,
+   "detail": "Smart contract panicked: the pool window is still open"
+  },
+  {
+   "rule": "R30",
+   "claim": "sealing ends with the pool window",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R30",
+   "claim": "a reveal must match its seal",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R30",
+   "claim": "an ask above the ceiling is refused",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R30",
+   "claim": "revealed asks are public",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R31",
+   "claim": "the cheapest offer wins",
+   "ok": true,
+   "detail": "box.s1.clade.testnet at 20000"
+  },
+  {
+   "rule": "R31",
+   "claim": "equal asks go to the lower account name",
+   "ok": true,
+   "detail": "box.s1.clade.testnet against fig.s1.clade.testnet"
+  },
+  {
+   "rule": "R31",
+   "claim": "the buyers split the winning ask, and the rest of each pledge comes back",
+   "ok": true,
+   "detail": "share 10000, buyer got 35000"
+  },
+  {
+   "rule": "R32",
+   "claim": "a seller that seals and never reveals takes a strike",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R33",
+   "claim": "losing sellers are free again, and the winner is not",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R31",
+   "claim": "a lone seller still wins, and the share follows its ask",
+   "ok": true,
+   "detail": "share 15500"
+  },
+  {
+   "rule": "R31",
+   "claim": "a sale with no offers refunds every pledge in full",
+   "ok": true,
+   "detail": "buyer got 45000"
+  },
+  {
+   "rule": "R31",
+   "claim": "a sale with too few buyers refunds every pledge and frees its seller",
+   "ok": true,
+   "detail": "buyer got 45000"
+  },
+  {
+   "rule": "R32",
+   "claim": "the keeper cannot post a briefing that was sold",
+   "ok": true,
+   "detail": "Smart contract panicked: the winning seller delivers this briefing"
+  },
+  {
+   "rule": "R32",
+   "claim": "only the winner can deliver, and its bill cannot exceed the sale",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R32",
+   "claim": "the winner delivers and is paid what the buyers paid, less its bill",
+   "ok": true,
+   "detail": "paid 17000, treasury 3000"
+  },
+  {
+   "rule": "R33",
+   "claim": "the winner is free again once it delivers",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R33",
+   "claim": "the writer cannot bet on its own briefing, and is refunded",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R32",
+   "claim": "a delivery after the commit window is refused",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R32",
+   "claim": "no delivery: every buyer gets its share back, and the winner takes a strike",
+   "ok": true,
+   "detail": "buyer got 15500"
+  },
+  {
+   "rule": "R33",
+   "claim": "after every sale, no seller or buyer is left holding an open position",
+   "ok": true,
+   "detail": ""
+  }
+ ],
+ "note": "Copied from the output of scripts/e2e-pools.ts, whose run stopped later, in the pool checks, before it could write this file."
+}

@@ -4,7 +4,7 @@
  * twice, and a colony with nothing going on costs one read per poll.
  */
 import { reputation } from "../../../engine/market.ts";
-import type { Agent, Order, Question, ResearchPool, Snapshot, Stats } from "./types";
+import type { Agent, Order, Question, ResearchPool, Sale, Snapshot, Stats } from "./types";
 
 export type Read = <T>(account: string, method: string, args?: object) => Promise<T>;
 
@@ -14,6 +14,9 @@ const finished = (q: Question) => q.status === "Settled" || q.status === "Void";
 const sameStats = (a: Stats, b: Stats) => a.questions === b.questions && a.settled === b.settled && a.alive === b.alive && a.agents === b.agents;
 
 export const isRunning = (s: Snapshot) => s.questions.some((q) => q.status === "Open");
+
+/** Changes whenever a sale has news: a new seal, a reveal, a winner or a delivery. */
+const saleStamp = (s?: Sale | null) => (s ? `${s.offers.length}:${s.offers.filter((o) => o.ask !== null).length}:${s.winner}:${s.paid}` : "");
 
 type ChainAgent = Omit<Agent, "id" | "label" | "credits" | "reputation" | "genome" | "death"> & { final_credits: string; heir: string | null };
 
@@ -29,9 +32,12 @@ export async function newerThan(from: Snapshot, stats: Stats, read: Read): Promi
   const start = from.questions.find((q) => !finished(q))?.id ?? from.questions.length;
   const chainRounds: Omit<Question, "orders">[] = [];
   const chainPools = new Map<number, ResearchPool>();
+  const chainSales = new Map<number, Sale>();
   for (let at = start; at < stats.questions; at += PAGE) {
     chainRounds.push(...(await read<Omit<Question, "orders">[]>(from.colony, "get_questions", { from: at, limit: PAGE })));
-    for (const p of await read<ResearchPool[]>(from.colony, "get_pools", { from: at, limit: PAGE })) chainPools.set(p.q, p);
+    const pools = await read<ResearchPool[]>(from.colony, "get_pools", { from: at, limit: PAGE });
+    for (const p of pools) chainPools.set(p.q, p);
+    if (pools.length) for (const s of await read<Sale[]>(from.colony, "get_sales", { from: at, limit: PAGE })) chainSales.set(s.q, s);
   }
 
   const known = new Map(from.questions.map((q) => [q.id, q]));
@@ -43,9 +49,9 @@ export async function newerThan(from: Snapshot, stats: Stats, read: Read): Promi
     const unchanged = old !== undefined && old.status === q.status && old.reveals === q.reveals && old.commits === q.commits;
     const orders = q.reveals === 0 ? [] : unchanged ? old.orders : await read<Order[]>(from.colony, "get_orders", { q: q.id });
     const research = pool
-      ? { ...pool, briefing: old?.research?.briefing ?? null, briefing_model: old?.research?.briefing_model ?? null, briefing_signed: old?.research?.briefing_signed ?? false }
+      ? { ...pool, sale: chainSales.get(q.id) ?? null, briefing: old?.research?.briefing ?? null, briefing_model: old?.research?.briefing_model ?? null, briefing_signed: old?.research?.briefing_signed ?? false }
       : null;
-    const poolMoved = (old?.research?.status ?? null) !== (research?.status ?? null) || (old?.research?.buyers.length ?? 0) !== (research?.buyers.length ?? 0);
+    const poolMoved = (old?.research?.status ?? null) !== (research?.status ?? null) || (old?.research?.buyers.length ?? 0) !== (research?.buyers.length ?? 0) || saleStamp(old?.research?.sale) !== saleStamp(research?.sale);
     if (!unchanged || poolMoved) moved = true;
     fresh.push({ ...q, orders, thoughts: old?.thoughts ?? {}, research });
   }

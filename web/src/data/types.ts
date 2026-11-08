@@ -13,6 +13,9 @@ export interface Genome {
   focus: Record<string, number>;
   /** How likely it is to join a research pool. Agents born before pools have none. */
   pool?: number;
+  /** R30: how keen it is to sell a briefing, and what it adds to its cost. Agents born before sales have neither. */
+  sell?: number;
+  markup?: number;
 }
 
 export interface Agent {
@@ -66,6 +69,24 @@ export type Resolver =
 
 export type PoolStatus = "Open" | "Closed" | "Bought" | "Failed" | "Refunded";
 
+/** R30: one seller's sealed offer. The ask stays null until it is revealed. */
+export interface Offer {
+  seller: string;
+  seal: string;
+  ask: string | null;
+}
+
+/** R30-R33: sellers competing to write a pool's briefing. */
+export interface Sale {
+  q: number;
+  reveal_end_ms: number;
+  offers: Offer[];
+  winner: string | null;
+  ask: string;
+  paid: string;
+  bill: string;
+}
+
 /** R26: agents buying a research briefing together. */
 export interface ResearchPool {
   q: number;
@@ -82,6 +103,8 @@ export interface ResearchPool {
   briefing?: string | null;
   briefing_model?: string | null;
   briefing_signed?: boolean;
+  /** R30: set when sellers competed to write the briefing. Absent for a fixed price. */
+  sale?: Sale | null;
 }
 
 export interface Question {
@@ -192,6 +215,7 @@ export interface Sim {
   habits?: { label: string; meanPct: number }[];
   pumps?: { share: number; trials: number; honestPriceError: number; pumpedPriceError: number; whaleLossPerPump: number; losingPumps: number }[];
   pools?: { every: number; price: string; seeds: number; cases: { label: string; briefingNoise: number; gene: number; buyers: number; withBriefing: number; withoutIt: number }[] };
+  auction?: { buyers: number; rounds: number; ceiling: string; pledge: string; seeds: number; markets: { sellers: number; price: number; buyers: number; share: number; sold: number; conservationErrors: number }[] };
 }
 
 export interface Experiment {

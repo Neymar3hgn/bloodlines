@@ -355,5 +355,29 @@
    }
   },
   "parent": "gum.s1.clade.testnet"
+ },
+ "fa.sol.s1.clade.testnet": {
+  "id": "fa.sol.s1.clade.testnet",
+  "genome": {
+   "name": "fa",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "strategy": "Keep short rules, but calibrate sports favorites upward: clear club favorites at 30–45% should usually be 55–65% unless strong draw/away evidence. Keep low probabilities for rare geopolitical/commodity events. Use base rates, then give a plain estimate.",
+   "temperature": 0.4160460478366936,
+   "shrink": 1.1567058324180706,
+   "size": 0.22569241646688187,
+   "focus": {
+    "sports": 0.7540575263268714,
+    "politics": 0.8231187391835508,
+    "world": 0.7470761707829356,
+    "economy": 0.7396277863760611,
+    "crypto": 1,
+    "tech": 0.8042600375581817,
+    "other": 1
+   },
+   "markup": 1.3846419657327353,
+   "pool": 0.4779501580737949,
+   "sell": 0.4905053425350762
+  },
+  "parent": "sol.s1.clade.testnet"
  }
 }

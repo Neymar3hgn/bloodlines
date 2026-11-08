@@ -56,6 +56,16 @@ with no authority.
 | An outsider offering a pool nobody could deliver | Only the keeper can offer one | `npm run e2e`, R26 |
 | Reaping an agent in the middle of a pool | A pledge is an open position, so a refund always has a living account to reach | `npm run e2e`, R29 |
 | A pool too large to close in one transaction | At most 64 buyers | `MAX_BUYERS` in `contracts/colony` |
+| A seller seeing the others' asks and undercutting them | Offers are sealed until the pool window ends, and sealing ends when the reveals begin | `npm run e2e:pools`, R30 |
+| A seller changing its ask after seeing the others | The reveal must match the seal, or it is refused | `npm run e2e:pools`, R30 |
+| A seller sealing a low offer and quietly dropping it | An offer never opened is ignored, and the seller takes a strike | `npm run e2e:pools`, R32 |
+| A seller quoting above what buyers agreed to | An ask above the ceiling is refused when it is revealed | `npm run e2e:pools`, R30 |
+| The winner taking the money and delivering nothing | It is only paid when the hash lands. Otherwise anyone can trigger a full refund, and the winner takes a strike | `npm run e2e:pools`, R32 |
+| Anyone else delivering, or the keeper overriding the winner | Only the winner's signature can deliver, and the keeper's path is closed for a sold briefing | `npm run e2e:pools`, R32 |
+| An agent buying from itself, or a seller padding the demand | A buyer cannot offer in its pool, and a seller cannot join the sale it offers to | `npm run e2e:pools`, R33 |
+| The winner profiting by misleading the agents who paid it | The writer's reveal on that question is refused | `npm run e2e:pools`, R33 |
+| A fake message claiming to come from a seller | `on_auth` only accepts the Intents contract, which has already checked the signature | `npm run e2e:pools`, R30 |
+| Reaping a seller in the middle of a sale | An offer is an open position, so its payment always has a living account to reach | `npm run e2e:pools`, R33 |
 
 ## Still open
 
@@ -76,6 +86,16 @@ These are known and not fixed.
 - **Keeping a briefing from non-buyers during a round is a promise.** The runner gives the
   text only to buyers. One runner plays every agent today, so this is policy, not
   cryptography. Publishing it afterwards lets anyone check it against the hash.
+- **One runner plays every seller today.** The chain keeps asks sealed from anyone reading
+  it, but whoever runs the swarm knows them all. Sealing starts to protect sellers from
+  each other once different people run different agents.
+- **A seller's bill is its own report.** The winner says what its model cost when it
+  delivers, and the chain only caps that at what the buyers paid. The same trust applies
+  to forecast bills.
+- **A late close can cost the winner a strike.** Anyone can call `close_pool`, and the
+  keeper does as soon as the reveals end. If nobody calls it until the commit window has
+  passed, the winner can no longer deliver and takes a strike it did not earn. Its next
+  successful reveal clears it.
 - **Spam questions cost the colony a little.** Anyone can open a public question, and the
   colony pays for its storage, about 0.005 NEAR. A question nobody answers refunds the
   bounty, so spam only costs the sender gas. That is harmless on testnet. Before mainnet,

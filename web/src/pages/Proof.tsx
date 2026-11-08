@@ -34,7 +34,7 @@ function CheckItYourself() {
     <section className="block check" aria-labelledby="check-title">
       <h2 id="check-title">Check it yourself</h2>
       <p>
-        This button re-reads every question's orders from the chain, from your own browser. It then rebuilds the price, every fill, every payout, every research pool and the money balance with <code>engine/market.ts</code>,
+        This button re-reads every question's orders from the chain, from your own browser. It then rebuilds the price, every fill, every payout, every research pool, every sealed sale and the money balance with <code>engine/market.ts</code>,
         the same reference file the contract is tested against. Your browser does the sums.
       </p>
       <button type="button" className="primary" onClick={run} disabled={check.state === "running"}>
@@ -103,7 +103,7 @@ function RuleTests() {
           {e2e.later ? (
             <p>
               {e2e.passed - e2e.later.passed} of {plural(e2e.total - e2e.later.total, "check")} passed on a test colony{e2e.network ? ` on ${e2e.network}` : ""}
-              {e2e.at ? `, ${stamp(Date.parse(e2e.at))}` : ""}. The {e2e.later.total} research pool checks came later and ran on <span className="mono">{e2e.later.colony}</span>, {stamp(Date.parse(e2e.later.at))}, where {e2e.later.passed} passed. Some of these try to break a rule and confirm the chain refuses.
+              {e2e.at ? `, ${stamp(Date.parse(e2e.at))}` : ""}. The {e2e.later.total} research pool and sealed sale checks came later and ran on <span className="mono">{e2e.later.colony}</span>, {stamp(Date.parse(e2e.later.at))}, where {e2e.later.passed} passed. Some of these try to break a rule and confirm the chain refuses.
             </p>
           ) : (
             <p>
@@ -313,6 +313,46 @@ function PoolAudit({ sim }: { sim: Sim }) {
   );
 }
 
+function AuctionAudit({ sim }: { sim: Sim }) {
+  const m = useModel();
+  const unit = tokenSymbol(m.snapshot.network);
+  const a = sim.auction;
+  if (!a?.markets.length) return null;
+  const alone = a.markets[0];
+  const full = a.markets[a.markets.length - 1];
+  return (
+    <div className="audit">
+      <h3>The sealed auction audit</h3>
+      <p>
+        {a.buyers} scripted buyers and up to {full.sellers} scripted sellers, for {a.rounds} rounds, with no model calls. A seller with no rivals raised its price until it reached the {column(a.ceiling)} {unit} ceiling. With {full.sellers} sellers, competition held the price at {Math.round(full.price).toLocaleString("en-US")}, and each buyer paid {Math.round(full.share).toLocaleString("en-US")} instead of {Math.round(alone.share).toLocaleString("en-US")}.
+      </p>
+      <table className="table">
+        <thead>
+          <tr>
+            <th className="num">Sellers</th>
+            <th className="num">Clearing price</th>
+            <th className="num">Buyers</th>
+            <th className="num">Each buyer paid</th>
+            <th className="num">Rounds sold</th>
+          </tr>
+        </thead>
+        <tbody>
+          {a.markets.map((row) => (
+            <tr key={row.sellers}>
+              <td className="num mono">{row.sellers}</td>
+              <td className="num mono">{Math.round(row.price).toLocaleString("en-US")}</td>
+              <td className="num mono">{row.buyers.toFixed(1)}</td>
+              <td className="num mono">{Math.round(row.share).toLocaleString("en-US")}</td>
+              <td className="num mono">{(row.sold * 100).toFixed(1)}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="small soft">Over {plural(a.seeds, "seed")}, from the last third of each run. Rounds not sold are the ones where a flaky seller won and did not deliver, so its buyers were refunded. Every unit of money was accounted for. <code>npm run sim:auction</code> prints it round by round.</p>
+    </div>
+  );
+}
+
 function SimSection() {
   const { sim } = useModel().snapshot;
   return (
@@ -329,6 +369,7 @@ function SimSection() {
           <LyingAudit sim={sim} />
           <WhaleAudit sim={sim} />
           <PoolAudit sim={sim} />
+          <AuctionAudit sim={sim} />
         </>
       )}
     </section>

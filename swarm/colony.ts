@@ -60,6 +60,15 @@ export interface PoolInput {
   minBuyers: number;
   /** How long agents have to join. The commit window starts after it. */
   secs: number;
+  /** R30: seconds for sellers to reveal once the pool window ends. Zero means no sale. */
+  revealSecs?: number;
+}
+
+/** R30: what one seller will charge. The salt keeps the ask secret until it reveals. */
+export interface OfferPlan {
+  seller: string;
+  ask: bigint;
+  salt: string;
 }
 
 export const sealOutcome = (yes: boolean) => {
@@ -162,7 +171,7 @@ export async function openQuestion(q: QuestionInput): Promise<number> {
       reveal_secs: q.revealSecs,
       wait_secs: q.waitSecs ?? 0,
       callback: q.callback ?? null,
-      pool: q.pool ? { price: q.pool.price.toString(), min_buyers: q.pool.minBuyers, secs: q.pool.secs } : null,
+      pool: q.pool ? { price: q.pool.price.toString(), min_buyers: q.pool.minBuyers, secs: q.pool.secs, reveal_secs: q.pool.revealSecs ?? 0 } : null,
     },
   });
   const salt = await currentSalt(verifier);
@@ -204,6 +213,30 @@ export async function joinBatch(q: number, agents: string[], pledge: bigint) {
   return executeIntents(keeper, verifier, agents.map((a) => joinPayload(q, a, pledge, salt)));
 }
 
+export const offerSeal = (q: number, p: OfferPlan) => sha256Hex(`offer:${q}:${p.seller}:${p.ask}:${p.salt}`);
+
+/** A message only this agent could have signed. The keeper relays it and pays the gas. */
+export const authPayload = (signer: string, salt: string, message: object): MultiPayload =>
+  signIntents(signer, verifier, salt, [{ intent: "auth_call", contract_id: colony, msg: JSON.stringify(message), min_gas: "30000000000000" }]);
+
+/** R30: each seller seals its own offer. */
+export async function sealOffers(q: number, plans: OfferPlan[]) {
+  const salt = await currentSalt(verifier);
+  return executeIntents(keeper, verifier, plans.map((p) => authPayload(p.seller, salt, { seal_offer: { q, hash: offerSeal(q, p) } })));
+}
+
+/** R30: each seller opens its offer, once the pool window has ended. */
+export async function revealOffers(q: number, plans: OfferPlan[]) {
+  const salt = await currentSalt(verifier);
+  return executeIntents(keeper, verifier, plans.map((p) => authPayload(p.seller, salt, { reveal_offer: { q, ask: p.ask.toString(), salt: p.salt } })));
+}
+
+/** R32: the winner puts the briefing's hash on chain and is paid. */
+export async function deliverBriefing(q: number, seller: string, hash: string, bill: bigint) {
+  const salt = await currentSalt(verifier);
+  return executeIntents(keeper, verifier, [authPayload(seller, salt, { deliver: { q, hash, bill: bill.toString() } })]);
+}
+
 export const closePool = (q: number) => call(keeper, colony, "close_pool", { q }, 150n);
 export const postBriefing = (q: number, hash: string) => call(keeper, colony, "post_briefing", { q, hash }, 150n);
 export const refundPool = (q: number) => call(keeper, colony, "refund_pool", { q }, 150n);
@@ -239,6 +272,8 @@ export const getAgents = (from = 0, limit = 200) => view<[string, any][]>(colony
 export const getQuestions = (from = 0, limit = 100) => view<any[]>(colony, "get_questions", { from, limit });
 export const getPool = (q: number) => view<any>(colony, "get_pool", { q });
 export const getPools = (from = 0, limit = 100) => view<any[]>(colony, "get_pools", { from, limit });
+export const getSales = (from = 0, limit = 100) => view<any[]>(colony, "get_sales", { from, limit });
+export const getSale = async (q: number) => (await getSales(q, 1))[0] ?? null;
 export const getClaimable = (id: string) => view<string>(colony, "get_claimable", { id });
 export const getReputation = (id: string) => view<number>(colony, "get_reputation", { id });
 export const getLineage = (id: string) => view<string[]>(colony, "get_lineage", { id });

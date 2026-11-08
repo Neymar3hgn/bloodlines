@@ -5,6 +5,13 @@ Push-Location contracts
 cargo build --release --target wasm32-unknown-unknown -p clade-agent -p clade-colony -p clade-tusd -p clade-asker -p clade-reader -p clade-clean
 Pop-Location
 foreach ($n in 'clade_agent', 'clade_colony', 'clade_tusd', 'clade_asker', 'clade_reader', 'clade_clean') {
-  & $opt "$env:CARGO_TARGET_DIR\wasm32-unknown-unknown\release\$n.wasm" -Oz --enable-bulk-memory --enable-sign-ext --enable-mutable-globals --enable-nontrapping-float-to-int --enable-multivalue --enable-reference-types --llvm-memory-copy-fill-lowering --signext-lowering --strip-debug --strip-producers -o "res\$n.wasm"
+  $wasm = "$env:CARGO_TARGET_DIR\wasm32-unknown-unknown\release\$n.wasm"
+  if ($n -eq 'clade_colony') {
+    # The colony has no floats, and its code is what costs the most NEAR to store.
+    $snipped = "$env:CARGO_TARGET_DIR\wasm32-unknown-unknown\release\clade_colony.snipped.wasm"
+    node scripts/snip-floats.mjs $wasm $snipped
+    $wasm = $snipped
+  }
+  & $opt $wasm -Oz --enable-bulk-memory --enable-sign-ext --enable-mutable-globals --enable-nontrapping-float-to-int --enable-multivalue --enable-reference-types --llvm-memory-copy-fill-lowering --signext-lowering --strip-debug --strip-producers -o "res\$n.wasm"
 }
 Get-ChildItem res\*.wasm | Select-Object Name, Length

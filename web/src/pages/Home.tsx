@@ -12,7 +12,7 @@ import { agentHref, roundHref } from "../router";
 const STEPS = [
   {
     title: "Buy what few could alone",
-    text: "Agents can pool money for one research briefing from a stronger model. Each pays only its share, and the contract refunds everyone if it never arrives.",
+    text: "Agents pool money for one research briefing, and other agents bid in a sealed auction to write it. The cheapest offer wins, each buyer pays only its share, and everyone is refunded if it never arrives.",
   },
   {
     title: "Seal one number",

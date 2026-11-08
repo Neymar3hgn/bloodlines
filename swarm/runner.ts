@@ -9,9 +9,9 @@ import { actions } from "near-api-js";
 import { poolPledge } from "../engine/market.ts";
 import { account, exists, inPool, nearBalance, view } from "./chain.ts";
 import * as c from "./colony.ts";
-import { childLabel, engages, gaussian, joins, mutateNumbers, toOrder, type Genome, type Rng } from "./genome.ts";
+import { askFor, childLabel, engages, gaussian, joins, markupOf, mutateNumbers, pickSellers, toOrder, type Genome, type Rng } from "./genome.ts";
 import { founders, MODELS } from "./founders.ts";
-import { AccountProblem, BRIEFING_MODEL, forecast, rewriteStrategy, writeBriefing, type QuestionText } from "./llm.ts";
+import { AccountProblem, briefingCost, forecast, rewriteStrategy, writeBriefing, type QuestionText } from "./llm.ts";
 
 const { colony } = c.deployment;
 const billScriptedUnits = 3_000n;
@@ -21,6 +21,10 @@ export const BOUNTY = 80_000n;
 /** R26: a briefing's fixed price before bills are scaled: a ceiling on what it costs to write. */
 const BRIEFING_UNITS = 10_000n;
 const MIN_BUYERS = 4;
+/** R30: how many agents may offer to write one briefing. */
+const MAX_SELLERS = 5;
+/** What a scripted briefing costs its writer, before bills are scaled. */
+const SCRIPTED_WRITING_COST = 1_000;
 
 export interface Settings {
   /** Real forecasts through NEAR AI Cloud, or scripted stand-ins. */
@@ -175,6 +179,8 @@ export interface RoundTiming {
   waitSecs?: number;
   /** R26: seconds agents have to join a research pool. Leave it out for a round with none. */
   poolSecs?: number;
+  /** R30: seconds sellers have to reveal after the pool window. Leave it out for a fixed-price pool. */
+  offerSecs?: number;
 }
 
 /**
@@ -193,54 +199,114 @@ async function joinEveryone(id: number, agents: string[], pledge: bigint, endMs:
   }
 }
 
-async function briefingFor(q: RoundInput, s: Settings) {
+/** R30: every seller seals its offer before the pool window ends. Resending is safe: a second seal is refused. */
+async function sealEveryOffer(id: number, plans: c.OfferPlan[], endMs: number) {
+  for (let pass = 0; pass < 4; pass++) {
+    const done = new Set<string>((await c.getSale(id)).offers.map((o: any) => o.seller));
+    const todo = plans.filter((p) => !done.has(p.seller));
+    if (todo.length === 0 || Date.now() > endMs - 3000) return;
+    await c.sealOffers(id, todo).catch((e) => console.log(`  a seal batch failed: ${String(e.message).slice(0, 100)}`));
+    await c.sleep(2500);
+  }
+}
+
+/** R30: every seller opens its offer. An offer left sealed costs its seller a strike, so this tries hard. */
+async function revealEveryOffer(id: number, plans: c.OfferPlan[], endMs: number) {
+  let todo = plans;
+  for (let pass = 0; pass < 5 && todo.length > 0; pass++) {
+    if (Date.now() > endMs - 2500) {
+      console.log(`  the reveal window closed with ${todo.length} offers still sealed`);
+      return;
+    }
+    await c.revealOffers(id, todo).catch((e) => console.log(`  a reveal batch failed: ${String(e.message).slice(0, 100)}`));
+    await c.sleep(2500);
+    const sealed = new Set<string>((await c.getSale(id)).offers.filter((o: any) => o.ask === null).map((o: any) => o.seller));
+    todo = plans.filter((p) => sealed.has(p.seller));
+  }
+}
+
+/** R30: each seller works out what writing would cost it, adds its markup, and keeps the result secret. */
+async function planOffers(q: RoundInput, sellers: Living[], ceiling: bigint, s: Settings): Promise<c.OfferPlan[]> {
+  return inPool(sellers, 4, async (r) => {
+    const cost = s.ai ? await briefingCost(r.genome.model) : SCRIPTED_WRITING_COST;
+    return { seller: r.id, ask: askFor(r.genome, BigInt(Math.max(1, Math.ceil(cost * s.billScale))), ceiling), salt: randomBytes(8).toString("hex") };
+  });
+}
+
+async function briefingFor(q: RoundInput, s: Settings, writer?: Living) {
+  const by = writer?.id ?? null;
   // A scripted buyer gets its edge from less noise in `scriptedThought`, not from this text.
-  if (!s.ai) return { text: `A scripted stand-in for a research briefing, written to test the contracts. Reference ${randomBytes(4).toString("hex")}.`, model: "scripted", cost: 0, tee: null, request: null, response: null };
-  const { text, reply } = await writeBriefing(q);
-  return { text, model: BRIEFING_MODEL, cost: reply.cost, tee: reply.tee, request: reply.rawRequest, response: reply.rawResponse };
+  if (!s.ai) return { text: `A scripted stand-in for a research briefing, written to test the contracts. Reference ${randomBytes(4).toString("hex")}.`, model: "scripted", cost: SCRIPTED_WRITING_COST, tee: null, request: null, response: null, writer: by };
+  const { text, reply } = await writeBriefing(q, writer?.genome.model);
+  return { text, model: reply.model, cost: reply.cost, tee: reply.tee, request: reply.rawRequest, response: reply.rawResponse, writer: by };
 }
 
 /**
- * R26-R28: agents pool money for one briefing, which only the buyers read during
- * the round. Returns the text and who bought it, or null if nothing was bought.
+ * R26-R33: agents pool money for one briefing, which only the buyers read during
+ * the round. With a sale, the cheapest sealed offer writes it. Returns the text, who
+ * bought it and who wrote it, or null if nothing was bought.
  */
 async function buyBriefing(id: number, q: RoundInput, agents: Living[], held: Map<string, bigint>, s: Settings) {
   const pool = await c.getPool(id);
   const pledge = BigInt(pool.pledge);
   const wanted = agents.filter((r) => joins(r.genome, r.id, q.id) && (held.get(r.id) ?? 0n) >= pledge + reserve).map((r) => r.id);
+  const openSale = await c.getSale(id);
+  let plans: c.OfferPlan[] = [];
+  if (openSale) {
+    // R33: a buyer cannot sell. A model that refuses this endpoint could never deliver, so it does not offer.
+    const free = agents.filter((r) => !wanted.includes(r.id) && (!s.ai || MODELS.includes(r.genome.model)));
+    plans = await planOffers(q, pickSellers(free, q.id, MAX_SELLERS), BigInt(pool.price), s);
+    await sealEveryOffer(id, plans, pool.end_ms);
+  }
   await joinEveryone(id, wanted, pledge, pool.end_ms, s);
   const wait = pool.end_ms - Date.now() + 1800;
   if (wait > 0) await c.sleep(wait);
+  if (openSale) {
+    await revealEveryOffer(id, plans, openSale.reveal_end_ms);
+    const left = openSale.reveal_end_ms - Date.now() + 1800;
+    if (left > 0) await c.sleep(left);
+  }
   await c.closePool(id);
   const closed = await c.poolAfter(id, "Open");
   // A refund waits in the colony until it is swept, so count every pledge as spent.
   for (const buyer of closed.buyers) held.set(buyer, (held.get(buyer) ?? 0n) - pledge);
   if (closed.status !== "Closed") {
-    console.log(`  only ${closed.buyers.length} agents wanted the briefing, so all were refunded`);
+    console.log(`  no sale: ${closed.buyers.length} buyers and ${plans.length} sellers, so all were refunded`);
     return null;
   }
-  const written = await briefingFor(q, s).catch((e) => {
+  const sale = await c.getSale(id);
+  const writer = sale ? agents.find((r) => r.id === sale.winner) : undefined;
+  const written = await briefingFor(q, s, writer).catch((e) => {
     if (e instanceof AccountProblem) throw e;
     console.log(`  the briefing could not be written: ${String(e.message).slice(0, 90)}`);
     return null;
   });
   if (!written) return null;
   const hash = c.sha256Hex(written.text);
-  await c.postBriefing(id, hash).catch((e) => console.log(`  the briefing hash did not land: ${String(e.message).slice(0, 90)}`));
+  const delivered = writer
+    ? c.deliverBriefing(id, writer.id, hash, minBig(BigInt(Math.max(1, Math.ceil(written.cost * s.billScale))), BigInt(closed.held)))
+    : c.postBriefing(id, hash);
+  await delivered.catch((e) => console.log(`  the briefing hash did not land: ${String(e.message).slice(0, 90)}`));
   const bought = await c.poolAfter(id, "Closed");
   if (bought.status !== "Bought") return null;
   briefings[id] = { ...written, hash };
   saveBriefings();
-  console.log(`  ${closed.buyers.length} agents bought a briefing, ${closed.share} units each instead of ${closed.price}`);
-  return { text: written.text, buyers: new Set<string>(closed.buyers) };
+  console.log(writer
+    ? `  ${writer.id} won at ${sale.ask} units against ${sale.offers.length - 1} rivals, and ${closed.buyers.length} agents paid ${closed.share} each instead of the ${closed.price} ceiling`
+    : `  ${closed.buyers.length} agents bought a briefing, ${closed.share} units each instead of ${closed.price}`);
+  return { text: written.text, buyers: new Set<string>(closed.buyers), writer: writer?.id ?? null };
 }
+
+const minBig = (a: bigint, b: bigint) => (a < b ? a : b);
 
 /** R28: whatever a pool still holds goes back, and refunds reach the buyers' own balances. */
 async function finishPool(id: number) {
   const pool = await c.getPool(id);
   if (!pool) return;
   if (pool.status === "Open" || pool.status === "Closed") await c.refundPool(id);
-  for (let i = 0; i < pool.buyers.length; i += 12) await c.sweep(pool.buyers.slice(i, i + 12));
+  const sale = await c.getSale(id);
+  const owed: string[] = [...pool.buyers, ...(sale?.winner ? [sale.winner] : [])];
+  for (let i = 0; i < owed.length; i += 12) await c.sweep(owed.slice(i, i + 12));
 }
 
 /** Agents think, seal and reveal, and the round clears. Returns the question id. */
@@ -267,8 +333,8 @@ export async function playRound(q: RoundInput, cfg: { max_stake: number }, timin
   let briefing: Awaited<ReturnType<typeof buyBriefing>> = null;
   if (timing.poolSecs) {
     const price = BRIEFING_UNITS * BigInt(s.billScale);
-    id = await open({ price, minBuyers: MIN_BUYERS, secs: timing.poolSecs });
-    console.log(`Q${id} [${q.category}] ${q.text.slice(0, 72)}, with a research pool`);
+    id = await open({ price, minBuyers: MIN_BUYERS, secs: timing.poolSecs, revealSecs: timing.offerSecs });
+    console.log(`Q${id} [${q.category}] ${q.text.slice(0, 72)}, with ${timing.offerSecs ? "a sealed sale" : "a research pool"}`);
     briefing = await buyBriefing(id, q, agents, held, s);
   }
 
@@ -277,6 +343,8 @@ export async function playRound(q: RoundInput, cfg: { max_stake: number }, timin
   const thoughts: Record<string, object> = {};
   await inPool(agents, 6, async (r) => {
     if (!engages(r.genome, r.id, q.id, q.category)) return;
+    // R33: the writer cannot bet on what it wrote.
+    if (briefing?.writer === r.id) return;
     const briefed = briefing?.buyers.has(r.id) ?? false;
     const t = await think(r, q, q.yes, s, briefed ? briefing!.text : undefined);
     if (!t) return;
@@ -400,7 +468,7 @@ export async function selection(cfg: any, s: Settings) {
     const taken = new Set(Object.values(registry).filter((x) => x.parent === r.id).map((x) => x.id.split(".")[0]));
     const label = childLabel(rng, taken);
     if (`${label}.${r.id}`.length > 64) continue;
-    let genome = mutateNumbers({ ...r.genome, name: label }, rng, MODELS);
+    let genome = mutateNumbers({ ...r.genome, markup: markupOf(r.genome), name: label }, rng, MODELS);
     if (s.ai) {
       const record = (journal[r.id] ?? []).map((x) => `${x.belief}% on "${x.text.slice(0, 70)}": ${x.yes ? "YES" : "NO"}`).join("\n");
       const rewritten = await rewriteStrategy(r.genome, record).catch((e) => {
