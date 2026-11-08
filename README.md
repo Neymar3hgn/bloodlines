@@ -45,12 +45,13 @@ npm ci
 
 | Do | You should see |
 |---|---|
-| `npm test` | `pass 76`, including 20,000 random order books that all balance exactly, and the whole AI path against a local mock |
+| `npm test` | `pass 80`, including 20,000 random order books that all balance exactly, and the whole AI path against a local mock |
 | `npm run sim` | A scripted colony with no AI calls, in seconds. Survivors beat founders on an exam, and lying loses money. Add `-- --seeds 8` for the published numbers |
-| `npm run verify` | The whole colony rebuilt from public chain data: `10 of 10 checks pass` |
+| `npm run verify` | The whole colony rebuilt from public chain data, including every signed model answer: `13 of 13 checks pass` |
 | `cd contracts && cargo test -p clade-core` | `9 passed`, including 2,000 vectors shared with the TypeScript engine (needs Rust 1.95) |
 | `npm run mcp` | An MCP server that lets any AI agent read the swarm. See [below](#for-near-builders) |
 | `npm run e2e` | The rules tested on a live network, with real rejected attacks. This one needs its own funded test colony. The last run is in [data/e2e-report.json](data/e2e-report.json) |
+| `npm run e2e:pools` | Just the research pool checks, on the public colony, for almost no NEAR. The last run is in [data/e2e-pools-report.json](data/e2e-pools-report.json) |
 
 ## How a round works
 
@@ -90,10 +91,11 @@ below the floor.
 | Contracts, agents, births, deaths, sealed rounds, Intents settlement | **Real**, live on NEAR testnet |
 | The Intents contract | **Real code**: a testnet copy with the same code hash as mainnet `intents.near` |
 | Money | Test USD on testnet. No real value |
-| The rounds now on chain | **Scripted agents**, testing the contracts, labelled as such on the site |
-| Real AI forecasts and the go/no-go experiment | **Built and tested against a mock, not yet run on real models.** It needs a NEAR AI key. `swarm/experiment.ts` |
+| The rounds now on chain | **Mixed.** 19 used scripted agents to test the contracts, and 6 used real models. The site labels each one |
+| Real AI forecasts | **Real, in 6 rounds on testnet**, rounds 24 to 29: 51 forecasts from 4 NEAR AI Cloud models, for $0.08 |
+| The go/no-go experiment | **Built and tested against a mock, not run.** It costs about $5 to $8 of NEAR AI credit. `swarm/experiment.ts` |
 | Live questions on real events | **Built and tested.** `swarm/live.ts` |
-| Research pools | **Built and tested in the simulator and against a mock.** The first on-chain run is next. Real briefings need the key |
+| Research pools | **Real on testnet.** 22 checks passed on the public colony, and agents bought 2 real briefings. Whether a briefing improves a forecast has not been measured |
 | Agent Market listing | **Built and tested against a mock, not listed.** It needs an account. [Guide](docs/agent-market.md) |
 | Simulator results | **Simulation.** They show the mechanism works, not that real AI improves |
 
@@ -103,7 +105,12 @@ From a live network and a simulation. Both can be re-run from this repo.
 
 **On testnet**
 
-- 53 rule checks run on chain, including rejected attacks. [Report](data/e2e-report.json)
+- 53 rule checks ran on a test colony, including rejected attacks, and 52 passed. The
+  failure was the test's own account running out of NEAR for gas, not a rule. The test
+  is fixed, but a full rerun needs about 4.5 NEAR for an hour, so it has not run again.
+  [Report](data/e2e-report.json)
+- After the public colony was upgraded for research pools, 22 more checks ran there,
+  including rejected attacks on the pools, and all 22 passed. [Report](data/e2e-pools-report.json)
 - An agent's account really is deleted, and its money reaches its parent.
 - **A child keeps running and trading after its parent's account is deleted.** NEAR's
   docs do not say this. Clade's tests check it.
@@ -111,8 +118,21 @@ From a live network and a simulation. Both can be re-run from this repo.
   itself by reading a NEAR contract, with nobody trusted.
 - We attacked our own oracle: a question naming an agent's `die` method now does
   nothing. [The bug and the fix](docs/security.md).
-- The whole AI path has run on chain against a local mock of NEAR AI, including signed
-  receipts that `npm run verify` checks. Real models have not run yet.
+
+**On real models**, 6 rounds on the public colony, for $0.08 of NEAR AI credit:
+
+- 51 forecasts went on chain, and every signed answer matches its receipt. 43 were signed
+  inside the model's own enclave. The 8 from Kimi were signed by NEAR AI's gateway, which
+  proves less.
+- Agents bought 2 real briefings together: 10 agents paid 0.008 each, and 8 agents paid
+  0.01 each, instead of 0.08 alone. `z-ai/glm-5.3` wrote them, signed by the gateway.
+- **What broke.** Models that reason first used up all 1,200 tokens before answering, so
+  in the first 4 rounds many agents placed no bid. Turning reasoning off, with NEAR AI's
+  `chat_template_kwargs`, fixed it and cut the cost per forecast from about $0.0015 to
+  $0.0002. `levanto/sage-2` is a decision model that refuses chat calls, so its 3 agents
+  sit out.
+- Six rounds are far too few to say anything about accuracy, so we do not. Whether
+  evolution improves real forecasts is **not shown**: that takes the full experiment.
 
 **In the simulator**, with 25 founders over 1,200 questions and 8 seeds:
 
@@ -178,6 +198,7 @@ node swarm/live.ts resolve
 ## Limitations
 
 - Testnet only so far, unaudited, with no real value at risk.
+- No agent on the public colony has died yet. Deaths are proven on test colonies.
 - The keeper posts bills and public results, so those need trust. Sealed and on-chain
   questions do not.
 - A rich, pivotal agent could profit slightly by shading its belief if it knew the

@@ -5,12 +5,15 @@
  */
 import { CATEGORIES, type Genome } from "./genome.ts";
 
-/** Models whose answers are signed in a secure enclave, from cloud-api.near.ai/v1/model/list. */
+/**
+ * Models whose answers are signed in a secure enclave, from cloud-api.near.ai/v1/model/list.
+ * levanto/sage-2 was here until the first real round: it is a decision model, served on a
+ * different endpoint, so chat requests to it are refused. Agents already born with it sit out.
+ */
 export const MODELS = [
   "deepseek-ai/DeepSeek-V4.1-Flash-1017",
   "Qwen/Qwen3.8-27B",
   "Qwen/Qwen3.6-35B-A3B-FP8",
-  "levanto/sage-2",
   "moonshotai/kimi-k2.6",
 ];
 

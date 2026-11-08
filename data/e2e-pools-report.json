@@ -1,0 +1,142 @@
+{
+ "colony": "s1.clade.testnet",
+ "verifier": "verifier.tidepool-sandbox.testnet",
+ "network": "testnet",
+ "at": "2026-11-08T01:29:13.705Z",
+ "passed": 22,
+ "total": 22,
+ "results": [
+  {
+   "rule": "R26",
+   "claim": "an outsider cannot offer a pool, and is refunded",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R26",
+   "claim": "a question can offer a briefing, with a pledge of price over minimum buyers",
+   "ok": true,
+   "detail": "pledge 45000"
+  },
+  {
+   "rule": "R26",
+   "claim": "the commit window starts after the pool window",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R26",
+   "claim": "an account that is not an agent cannot join, and is refunded",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R26",
+   "claim": "a wrong pledge is refused and refunded",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R26",
+   "claim": "agents join together in one transaction, each with its own signature",
+   "ok": true,
+   "detail": "3 buyers, 135000 held"
+  },
+  {
+   "rule": "R26",
+   "claim": "an agent cannot join twice, and is refunded",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R27",
+   "claim": "a pool cannot close before its window ends",
+   "ok": true,
+   "detail": "Smart contract panicked: the pool window is still open"
+  },
+  {
+   "rule": "R29",
+   "claim": "an agent in an unfinished pool cannot be reaped",
+   "ok": true,
+   "detail": "Smart contract panicked: agent has open positions"
+  },
+  {
+   "rule": "R26",
+   "claim": "a late join is refused and refunded",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R27",
+   "claim": "each buyer pays only its share of the price",
+   "ok": true,
+   "detail": "share 30000"
+  },
+  {
+   "rule": "R27",
+   "claim": "the rest of each pledge comes back",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R28",
+   "claim": "only the keeper can post a briefing",
+   "ok": true,
+   "detail": "Smart contract panicked: only the keeper"
+  },
+  {
+   "rule": "R28",
+   "claim": "a briefing needs a real hash",
+   "ok": true,
+   "detail": "Smart contract panicked: commit hash must be 32 bytes of hex"
+  },
+  {
+   "rule": "R28",
+   "claim": "the hash goes on chain, and only then is the briefing paid for",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R28",
+   "claim": "a bought pool cannot be refunded",
+   "ok": true,
+   "detail": "Smart contract panicked: the pool is finished"
+  },
+  {
+   "rule": "R27",
+   "claim": "with too few buyers, everyone gets the whole pledge back",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R28",
+   "claim": "a pool cannot be refunded while a briefing can still arrive",
+   "ok": true,
+   "detail": "Smart contract panicked: a briefing can still arrive"
+  },
+  {
+   "rule": "R28",
+   "claim": "a briefing cannot arrive after the commit window",
+   "ok": true,
+   "detail": "Smart contract panicked: too late for a briefing"
+  },
+  {
+   "rule": "R28",
+   "claim": "with no briefing, anyone can trigger a full refund",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R29",
+   "claim": "a finished pool releases its buyers",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "rule": "R27",
+   "claim": "a refund reaches the agent's own balance",
+   "ok": true,
+   "detail": "net cost 30000"
+  }
+ ]
+}

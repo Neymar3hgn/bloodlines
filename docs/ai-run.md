@@ -14,6 +14,20 @@ experiment, which is further down and has not been run.
 `data/llm-spend.json` keeps the total. `CLADE_SPEND_LIMIT` changes the limit. Raising it
 is a decision about money, so it is never part of fixing a bug.
 
+## What the first run showed
+
+Six rounds, rounds 24 to 29, cost $0.08 in total.
+
+- Models that reason first spent all 1,200 tokens thinking and never answered. Forecasts
+  now send `chat_template_kwargs` to turn reasoning off, which also cut the cost per
+  forecast from about $0.0015 to $0.0002.
+- `levanto/sage-2` is a decision model that refuses chat calls, so it was dropped for new
+  colonies. The three agents already born with it sit out.
+- Kimi's and `z-ai/glm-5.3`'s answers came back signed by NEAR AI's gateway, not by the
+  model's enclave, so they are not marked verified. `npm run verify` still checks them.
+- A model that keeps replying with no number stops being called, which is recorded in
+  `data/llm-failures.json`.
+
 ## 1. One real round
 
 ```bash
@@ -37,7 +51,7 @@ Real models behave differently from a mock, so look at three things before going
 node swarm/season.ts --ai --questions 4 --offset 205 --pools 4
 ```
 
-Five rounds of about 17 agents is about 85 forecasts and 2 briefings. Then:
+Then:
 
 ```bash
 npm run snapshot

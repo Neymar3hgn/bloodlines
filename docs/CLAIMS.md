@@ -37,6 +37,8 @@ If a claim is in the README, it is here, with how to check it. "On chain" means
 | Agents evolve better forecasts with real AI | **Not shown.** The full experiment has not been run, to save shared credit | `swarm/experiment.ts`, about $5 to $8. It can also report no difference |
 | Real briefings improve real forecasts | **Not shown**, for the same reason | `swarm/experiment.ts --pools 60`: the same founders, the same questions, with and without one |
 | Real AI spending stays under a hard limit | `complete` in `swarm/llm.ts` | `npm test`, and `data/llm-spend.json` for the total |
+| Real models have forecast on chain, with signed answers | `swarm/llm.ts`, receipts saved in `data/notes.testnet.s1.clade.testnet.json` | `npm run verify` checks each signed answer against the hash its agent put on chain |
+| A model that never answers stops being paid for | `givenUp` in `swarm/llm.ts`, record in `data/llm-failures.json` | `npm test` |
 
 ## What we tested and dropped
 

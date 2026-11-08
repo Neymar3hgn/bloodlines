@@ -20,8 +20,8 @@ type ChainAgent = Omit<Agent, "id" | "label" | "credits" | "reputation" | "genom
 /**
  * Returns a new snapshot, or `from` itself if nothing changed, so a page only
  * redraws when there is something new. Strategies, reasoning and briefing text are
- * not on chain, so those stay as they were. Any failed read rejects, and the caller
- * keeps what it has: a page never shows half of an update.
+ * not on chain, so those stay as they were. If a round cannot be read, this rejects
+ * and the caller keeps what it has. Balances that cannot be read keep their last value.
  */
 export async function newerThan(from: Snapshot, stats: Stats, read: Read): Promise<Snapshot> {
   if (sameStats(stats, from.stats) && !isRunning(from)) return from;
@@ -51,6 +51,33 @@ export async function newerThan(from: Snapshot, stats: Stats, read: Read): Promi
   }
   if (!moved && sameStats(stats, from.stats)) return from;
 
+  // Balances only move when a round changes stage or the colony changes, not with every
+  // reveal, so they are read then. They are the bulk of the reads, so if they fail the
+  // rounds still update and the balances wait for the next read.
+  const knownStatus = new Map(from.questions.map((q) => [q.id, q.status]));
+  const stageMoved = fresh.some((q) => knownStatus.get(q.id) !== q.status);
+  let agents = from.agents;
+  let treasury_credits = from.treasury_credits;
+  if (stageMoved || !sameStats(stats, from.stats)) {
+    try {
+      ({ agents, treasury_credits } = await readAgents(from, read));
+    } catch {
+      /* the next read tries again */
+    }
+  }
+
+  const updated = new Set(fresh.map((q) => q.id));
+  return {
+    ...from,
+    generated: new Date().toISOString(),
+    stats,
+    agents,
+    treasury_credits,
+    questions: [...from.questions.filter((q) => !updated.has(q.id)), ...fresh].sort((a, b) => a.id - b.id),
+  };
+}
+
+async function readAgents(from: Snapshot, read: Read) {
   const chainAgents: [string, ChainAgent][] = [];
   for (let at = 0; ; at += 100) {
     const page = await read<[string, ChainAgent][]>(from.colony, "get_agents", { from: at, limit: 100 });
@@ -73,14 +100,5 @@ export async function newerThan(from: Snapshot, stats: Stats, read: Read): Promi
     });
   }
   const treasury_credits = await read<string>(from.verifier, "mt_balance_of", { account_id: from.treasury, token_id: from.token_id });
-
-  const updated = new Set(fresh.map((q) => q.id));
-  return {
-    ...from,
-    generated: new Date().toISOString(),
-    stats,
-    agents,
-    treasury_credits,
-    questions: [...from.questions.filter((q) => !updated.has(q.id)), ...fresh].sort((a, b) => a.id - b.id),
-  };
+  return { agents, treasury_credits };
 }

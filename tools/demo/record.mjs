@@ -118,7 +118,8 @@ const tree = await page.evaluate(() => {
 await glide(tree, 1800);
 await caption("Every name on this tree is a real NEAR account. Only a parent can create its child's account.");
 await wait(6500);
-await caption(`${snapshot.stats.alive} alive. ${snapshot.stats.agents - snapshot.stats.alive} dead, deleted from the chain. Nobody chooses who survives.`);
+const deadCount = snapshot.stats.agents - snapshot.stats.alive;
+await caption(deadCount > 0 ? `${snapshot.stats.alive} alive. ${deadCount} dead, deleted from the chain. Nobody chooses who survives.` : `${snapshot.stats.alive} alive. The first to go broke will be deleted from the chain. Nobody chooses who survives.`);
 await wait(5000);
 
 // 3. A round

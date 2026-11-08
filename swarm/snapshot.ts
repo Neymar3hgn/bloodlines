@@ -34,6 +34,23 @@ function researchOn(q: any, pool: any) {
   return { ...pool, briefing: published ? written.text : null, briefing_model: published ? written.model : null, briefing_signed: published ? (written.tee?.verified ?? false) : false };
 }
 
+/**
+ * The last full on-chain test run, plus the research pool checks, which ran later on
+ * the public colony. Each part keeps its own colony and date.
+ */
+function testReport() {
+  const full = read<any>("data/e2e-report.json", null);
+  const pools = read<any>("data/e2e-pools-report.json", null);
+  if (!full || !pools) return full ?? pools;
+  return {
+    ...full,
+    passed: full.passed + pools.passed,
+    total: full.total + pools.total,
+    results: [...full.results, ...pools.results],
+    later: { colony: pools.colony, at: pools.at, passed: pools.passed, total: pools.total },
+  };
+}
+
 async function allAgents() {
   const rows: [string, any][] = [];
   for (let from = 0; ; from += 100) {
@@ -93,7 +110,7 @@ const snapshot = {
     death: a.status === "Dead" ? { balance: a.final_credits, heir: a.heir } : null,
   })),
   questions: questions.map((q, i) => ({ ...q, orders: orders[i], thoughts: thoughtsOn(q.id), research: researchOn(q, pools.get(q.id)) })),
-  e2e: read("data/e2e-report.json", null),
+  e2e: testReport(),
   sim: read("data/sim-report.json", null),
   experiment: read("data/experiment.json", null),
 };

@@ -15,6 +15,7 @@
                     "build":  "powershell -NoProfile -File scripts/build.ps1",
                     "deploy":  "node scripts/deploy.ts",
                     "e2e":  "node scripts/e2e.ts",
+                    "e2e:pools":  "node scripts/e2e-pools.ts",
                     "verify":  "node scripts/verify.ts",
                     "season":  "node swarm/season.ts",
                     "experiment":  "node swarm/experiment.ts",

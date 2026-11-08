@@ -12,7 +12,7 @@ import type { Genome } from "./genome.ts";
 const BASE = process.env.NEARAI_URL ?? "https://cloud-api.near.ai/v1";
 const KEY = process.env.NEARAI_API_KEY ?? "";
 const CACHE = "data/llm";
-/** Forecasts are short, but thinking models spend tokens before they answer. */
+/** A ceiling only. Forecasts ask for no thinking, so they use a small part of this. */
 const MAX_TOKENS = 1200;
 /**
  * What real calls have cost, across every run. The credit is limited,
@@ -29,6 +29,29 @@ export class AccountProblem extends Error {
 }
 
 export const spentSoFar = (): { usd: number; calls: number } => (LEDGER && existsSync(LEDGER) ? JSON.parse(readFileSync(LEDGER, "utf8")) : { usd: 0, calls: 0 });
+
+/**
+ * Replies with no number in them, by model, across runs. A thinking model that runs out
+ * of tokens before it answers is paid for anyway, so once a model fails more often than
+ * it answers, calling it again only spends money. Delete the file to try it again.
+ */
+const RECORD = process.env.CLADE_FAILURES_FILE ?? (LEDGER ? "data/llm-failures.json" : null);
+const failureRecord = (): Record<string, { ok: number; failed: number }> => (RECORD && existsSync(RECORD) ? JSON.parse(readFileSync(RECORD, "utf8")) : {});
+
+function noteAnswer(model: string, parsed: boolean) {
+  if (!RECORD) return;
+  const all = failureRecord();
+  const row = all[model] ?? { ok: 0, failed: 0 };
+  if (parsed) row.ok += 1;
+  else row.failed += 1;
+  all[model] = row;
+  writeFileSync(RECORD, JSON.stringify(all, null, 1));
+}
+
+export function givenUp(model: string): boolean {
+  const row = failureRecord()[model];
+  return !!row && row.failed >= 3 && row.failed > row.ok * 2;
+}
 
 function recordSpend(micros: number) {
   if (!LEDGER) return;
@@ -195,11 +218,19 @@ async function signatureFor(id: string, model: string, requestHash: string, resp
   return null;
 }
 
-function requestBody(model: string, system: string, user: string, temperature: number | null, maxTokens: number): string {
+/**
+ * Asks a reasoning model to answer directly. Thinking is billed as output and can use up
+ * every token before any answer is written. Qwen and most models read `enable_thinking`,
+ * and Kimi reads `thinking`. A model's template ignores the one it does not know.
+ */
+const NO_THINKING = { chat_template_kwargs: { enable_thinking: false, thinking: false } };
+
+function requestBody(model: string, system: string, user: string, temperature: number | null, maxTokens: number, think: boolean): string {
   return JSON.stringify({
     model,
     ...(temperature === null ? {} : { temperature }),
     max_tokens: maxTokens,
+    ...(think ? {} : NO_THINKING),
     messages: [
       { role: "system", content: system },
       { role: "user", content: user },
@@ -207,13 +238,15 @@ function requestBody(model: string, system: string, user: string, temperature: n
   });
 }
 
-export async function complete(model: string, system: string, user: string, temperature: number, maxTokens = MAX_TOKENS): Promise<Reply> {
+export const requestBodyForTest = requestBody;
+
+export async function complete(model: string, system: string, user: string, temperature: number, maxTokens = MAX_TOKENS, think = true): Promise<Reply> {
   if (!KEY) throw new Error("NEARAI_API_KEY is not set");
   if (spentSoFar().usd >= LIMIT_USD) throw new AccountProblem(0);
   const price = (await modelPrices()).get(model);
   if (price?.verifiable) await attestation(model);
   // Build the body once. The signature covers these exact bytes.
-  let body = requestBody(model, system, user, temperature, maxTokens);
+  let body = requestBody(model, system, user, temperature, maxTokens, think);
   let triedWithoutTemperature = false;
   for (let attempt = 1; ; attempt++) {
     const res = await fetch(`${BASE}/chat/completions`, {
@@ -244,7 +277,7 @@ export async function complete(model: string, system: string, user: string, temp
     // Some models refuse a temperature. That is a choice of ours, not a real failure.
     if (status === 400 && !triedWithoutTemperature) {
       triedWithoutTemperature = true;
-      body = requestBody(model, system, user, null, maxTokens);
+      body = requestBody(model, system, user, null, maxTokens, true);
       continue;
     }
     if (status === 401 || status === 402) throw new AccountProblem(status);
@@ -310,10 +343,12 @@ export function parseForecast(raw: string): { probability: number; reasoning: st
 }
 
 export async function forecast(g: Genome, q: QuestionText, briefing?: string): Promise<Forecast | null> {
-  const reply = await complete(g.model, SYSTEM(g.strategy), questionPrompt(q, briefing), g.temperature);
+  if (givenUp(g.model)) throw new Error(`${g.model} keeps replying with no number, so it is skipped to save credit`);
+  const reply = await complete(g.model, SYSTEM(g.strategy), questionPrompt(q, briefing), g.temperature, MAX_TOKENS, false);
   const parsed = parseForecast(reply.content);
-  if (!parsed || !Number.isFinite(parsed.probability)) return null;
-  return { ...parsed, reply };
+  const ok = !!parsed && Number.isFinite(parsed.probability);
+  noteAnswer(g.model, ok);
+  return ok ? { ...parsed!, reply } : null;
 }
 
 // ---------- Research pools ----------

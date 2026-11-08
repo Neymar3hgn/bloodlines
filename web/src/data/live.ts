@@ -8,9 +8,10 @@ import { useEffect, useState } from "react";
 import { isRunning, newerThan, type Read } from "./merge.ts";
 import type { Snapshot, Stats } from "./types";
 
-const RPC: Record<string, string> = {
-  testnet: "https://rpc.testnet.fastnear.com",
-  mainnet: "https://rpc.mainnet.fastnear.com",
+/** Public RPCs that answer a browser. A rate-limited one moves to the back of the list. */
+const RPC: Record<string, string[]> = {
+  testnet: ["https://rpc.testnet.fastnear.com", "https://rpc.testnet.near.org"],
+  mainnet: ["https://rpc.mainnet.fastnear.com", "https://rpc.mainnet.near.org"],
 };
 
 const POLL_MS = 30_000;
@@ -18,18 +19,34 @@ const POLL_MS = 30_000;
 const ROUND_POLL_MS = 10_000;
 /** One missed read is not an outage, so a good read stays on show for two polls. */
 const STALE_MS = 2.5 * POLL_MS;
-const SPACING_MS = 220;
+const SPACING_MS = 350;
 
-export const rpcUrl = (network: string) => RPC[network] ?? RPC.testnet;
+const endpoints = (network: string) => RPC[network] ?? RPC.testnet;
+export const rpcUrl = (network: string) => endpoints(network)[0];
 
 export const explorerUrl = (network: string, account: string) =>
   `https://${network === "mainnet" ? "" : "testnet."}nearblocks.io/address/${account}`;
 
 const toBase64 = (text: string) => btoa(String.fromCharCode(...new TextEncoder().encode(text)));
 
-/** Calls a view method. Throws on any failure, so callers choose their own fallback. */
+/** Calls a view method, trying each public RPC in turn. Throws if none answers, so callers choose their own fallback. */
 export async function view<T>(network: string, account: string, method: string, args: object = {}, timeoutMs = 8000): Promise<T> {
-  const res = await fetch(rpcUrl(network), {
+  const list = endpoints(network);
+  let last: unknown;
+  for (let i = 0; i < list.length; i++) {
+    try {
+      return await viewAt<T>(list[0], account, method, args, timeoutMs);
+    } catch (e) {
+      last = e;
+      // A 429 arrives with no CORS header, so it looks like any other failure. Try the next one.
+      list.push(list.shift()!);
+    }
+  }
+  throw last;
+}
+
+async function viewAt<T>(url: string, account: string, method: string, args: object, timeoutMs: number): Promise<T> {
+  const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
     signal: AbortSignal.timeout(timeoutMs),

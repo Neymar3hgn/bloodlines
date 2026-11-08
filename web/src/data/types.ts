@@ -161,6 +161,8 @@ export interface E2e {
   passed: number;
   total: number;
   results: E2eResult[];
+  /** Checks added after the last full run, and run on their own. */
+  later?: { colony: string; at: string; passed: number; total: number };
 }
 
 export interface SimSummary {

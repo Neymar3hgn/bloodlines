@@ -13,7 +13,7 @@ const PORT = 8792;
 process.env.NEARAI_URL = `http://127.0.0.1:${PORT}/v1`;
 
 // The client reads its settings on import, so these must be set first.
-const { AccountProblem, attestation, complete, eip191Signer, forecast, parseForecast, questionPrompt, rewriteStrategy, writeBriefing } = await import("./llm.ts");
+const { AccountProblem, attestation, complete, eip191Signer, forecast, parseForecast, questionPrompt, requestBodyForTest, rewriteStrategy, writeBriefing } = await import("./llm.ts");
 const { founders } = await import("./founders.ts");
 
 const genome = { ...founders()[0], model: "mock/fast" };
@@ -133,6 +133,12 @@ test("a parent rewrites its strategy, without its private reasoning", async () =
   });
 });
 
+test("a forecast asks the model to answer without thinking first, and a briefing does not", () => {
+  const body = (think: boolean) => JSON.parse(requestBodyForTest("m", "s", "u", 0.2, 100, think));
+  assert.deepEqual(body(false).chat_template_kwargs, { enable_thinking: false, thinking: false });
+  assert.equal(body(true).chat_template_kwargs, undefined);
+});
+
 test("rule_26 a briefing is plain text with a signed receipt, without private reasoning", async () => {
   await withMock({ content: "<think>private</think>\nThe base rate is low." }, async () => {
     const { text, reply } = await writeBriefing(question);
@@ -190,6 +196,27 @@ for (const t of [0.1, 0.2]) { try { await complete("mock/fast", "s", "u", t); co
     const spent = JSON.parse(readFileSync(file, "utf8"));
     assert.equal(spent.calls, 1);
     assert.ok(Math.abs(spent.usd - 0.000216) < 1e-9, String(spent.usd));
+  } finally {
+    await mock.close();
+    rmSync(file, { force: true });
+  }
+});
+
+test("a model that keeps replying with no number stops being paid for", async () => {
+  const mock = await startMock(PORT, { content: "Let me think about this carefully" });
+  const { execFile } = await import("node:child_process");
+  const { rmSync } = await import("node:fs");
+  const file = `data/failures-test-${process.pid}.json`;
+  const env = { ...process.env, NEARAI_URL: mock.url, NEARAI_API_KEY: "test-key", NEARAI_BACKOFF_MS: "5", CLADE_FAILURES_FILE: file };
+  const script = `import { forecast } from "./swarm/llm.ts";
+const g = { name: "t", model: "mock/fast", strategy: "s", temperature: 0.3, shrink: 1, size: 0.2, focus: {} };
+for (let i = 0; i < 4; i++) { try { console.log(String(await forecast(g, { id: "q", text: "x", category: "other" }))); } catch (e) { console.log(e.message); } }`;
+  try {
+    const out = await new Promise<string>((resolve, reject) => {
+      execFile(process.execPath, ["--input-type=module", "-e", script], { env }, (e, stdout) => (e ? reject(e) : resolve(stdout)));
+    });
+    assert.match(out, /^null\nnull\nnull\n.*skipped to save credit/s);
+    assert.equal(mock.stats().chats, 3, "the fourth call never reaches the model");
   } finally {
     await mock.close();
     rmSync(file, { force: true });

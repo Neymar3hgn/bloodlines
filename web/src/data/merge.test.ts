@@ -114,6 +114,27 @@ test("births and deaths reach the tree, with balances and reputation from the ch
   assert.equal(next.treasury_credits, "999");
 });
 
+test("rounds still update when the balances cannot be read", async () => {
+  const s = base([round(0)]);
+  const { read: chain } = fakeChain({ questions: [{ id: 1, status: "Open", commits: 4, reveals: 0 }] });
+  const read: Read = async (account, method, args) => {
+    if (method === "get_agents" || method === "mt_balance_of") throw new Error("RPC answered 429");
+    return chain(account, method, args);
+  };
+  const next = await newerThan(s, { ...s.stats, questions: 2 }, read);
+  assert.equal(next.questions.length, 2);
+  assert.equal(next.agents, s.agents, "the last balances stay on show");
+});
+
+test("a reveal alone does not read every balance again", async () => {
+  const open = round(1, { status: "Open", commits: 3, reveals: 1 });
+  const s = base([round(0), open]);
+  const { read, calls } = fakeChain({ questions: [{ id: 1, status: "Open", commits: 3, reveals: 2 }], orders: { 1: [{ agent: "a.c" }, { agent: "b.c" }] } });
+  const next = await newerThan(s, s.stats, read);
+  assert.equal(next.questions[1].orders.length, 2);
+  assert.ok(!calls.includes("mt_balance_of") && !calls.includes("get_agents"));
+});
+
 test("a failed read rejects, so a page never shows half an update", async () => {
   const s = base([round(0)]);
   const read: Read = async () => {

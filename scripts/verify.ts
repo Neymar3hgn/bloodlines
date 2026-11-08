@@ -144,6 +144,7 @@ check("Every payout and reward recomputed", payoutOk === payoutChecked, `${payou
 // model's signature over that hash must recover to the signer the enclave named.
 let receipts = 0;
 let receiptsOk = 0;
+let inEnclave = 0;
 for (const q of questions) {
   const rows = notes[q.id];
   if (!rows || q.reveals === 0) continue;
@@ -152,12 +153,14 @@ for (const q of questions) {
     if (!n?.tee) continue;
     receipts += 1;
     const hashes = sha256(n.response) === n.tee.response_hash && sha256(n.request) === n.tee.request_hash && o.receipt === n.tee.response_hash;
-    const text = `${n.tee.model}:${n.tee.request_hash}:${n.tee.response_hash}`;
+    // A model's enclave signs `model:request:response`. NEAR AI's gateway signs `request:response`.
+    const text = n.tee.kind === "gateway" ? `${n.tee.request_hash}:${n.tee.response_hash}` : `${n.tee.model}:${n.tee.request_hash}:${n.tee.response_hash}`;
+    if (n.tee.verified) inEnclave += 1;
     if (hashes && n.tee.text === text && eip191Signer(text, n.tee.signature) === n.tee.signer) receiptsOk += 1;
     else console.log(`  question ${q.id}, ${o.agent}: the receipt does not check out`);
   }
 }
-if (receipts > 0) check("Every signed answer matches its receipt on chain", receiptsOk === receipts, `${receiptsOk} of ${receipts}`);
+if (receipts > 0) check("Every signed answer matches its receipt on chain", receiptsOk === receipts, `${receiptsOk} of ${receipts}, ${inEnclave} signed inside the model's enclave`);
 
 // R26-R28: every pool charged exactly what the rules say, and every briefing bought
 // is the text whose hash went on chain before agents committed.

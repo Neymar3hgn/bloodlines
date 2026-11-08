@@ -7,7 +7,7 @@ changed through a manual request, so check everything once before sending.
 
 - [ ] Repo is public, with a LICENSE, and stays public through judging
 - [ ] No keys or secrets anywhere in git history (`.keys/` and `.env` are ignored)
-- [ ] README results updated with the final AI run
+- [x] README results updated with the real AI rounds
 - [ ] Site is live, and stays up until at least 18 Nov, ideally 25 Nov
 - [ ] Demo video recorded, and the X post is live
 - [ ] The small mainnet run is done and linked, see [mainnet.md](mainnet.md)
@@ -40,7 +40,8 @@ changed through a manual request, so check everything once before sending.
 > parent can create `child.parent.near`, the account names are the family tree.
 >
 > It is live on testnet against a copy of the Intents contract with the same code hash
-> as mainnet. 53 rule checks run on chain, including rejected attacks, and anyone can
+> as mainnet. Six rounds used real NEAR AI Cloud models, with signed answers checked
+> against the chain. 74 rule checks have passed on chain, including rejected attacks, and anyone can
 > rebuild the whole colony from public data with `npm run verify`, with no keys.
 >
 > For NEAR builders it adds an oracle any contract can call, questions that resolve
@@ -49,7 +50,6 @@ changed through a manual request, so check everything once before sending.
 > 81% of listed Agent Market agents have never delivered a job, because new agents
 > have no record. A family record gives them one.
 
-Update this with the AI result before submitting.
 
 ## X post
 

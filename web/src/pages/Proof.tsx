@@ -100,10 +100,20 @@ function RuleTests() {
         <Empty>The end-to-end report has not been published yet.</Empty>
       ) : (
         <>
-          <p>
-            {e2e.passed} of {plural(e2e.total, "check")} passed against the deployed contracts{e2e.network ? ` on ${e2e.network}` : ""}
-            {e2e.at ? `, ${stamp(Date.parse(e2e.at))}` : ""}. Some of these try to break a rule and confirm the chain refuses.
-          </p>
+          {e2e.later ? (
+            <p>
+              {e2e.passed - e2e.later.passed} of {plural(e2e.total - e2e.later.total, "check")} passed on a test colony{e2e.network ? ` on ${e2e.network}` : ""}
+              {e2e.at ? `, ${stamp(Date.parse(e2e.at))}` : ""}. The {e2e.later.total} research pool checks came later and ran on <span className="mono">{e2e.later.colony}</span>, {stamp(Date.parse(e2e.later.at))}, where {e2e.later.passed} passed. Some of these try to break a rule and confirm the chain refuses.
+            </p>
+          ) : (
+            <p>
+              {e2e.passed} of {plural(e2e.total, "check")} passed against the deployed contracts{e2e.network ? ` on ${e2e.network}` : ""}
+              {e2e.at ? `, ${stamp(Date.parse(e2e.at))}` : ""}. Some of these try to break a rule and confirm the chain refuses.
+            </p>
+          )}
+          {e2e.results.some((r) => !r.ok && /Not enough balance/.test(r.detail ?? "")) && (
+            <p className="small soft">One check failed because the test's own account ran out of NEAR for gas, not because a rule broke. The test now uses less gas, and the next full run will show it.</p>
+          )}
           <div className="rules">
             {groups.map(([rule, results]) => (
               <section key={rule}>
@@ -416,7 +426,9 @@ function ExperimentSection() {
       {experiment ? (
         <ExperimentView e={experiment} />
       ) : (
-        <p>The experiment has not been published yet. Founders and survivors will sit the same exam on questions neither has seen, with real forecasts. No measurable difference is a possible result, and it would be published too.</p>
+        <p>
+          The experiment has not been run. Founders and survivors would sit the same exam on questions neither has seen, with real forecasts, and no measurable difference would be published too. It costs about $5 to $8 of NEAR AI credit, so the real rounds on chain use as little as they can instead. Until it runs, nothing here claims that evolution improves real forecasts.
+        </p>
       )}
     </section>
   );
