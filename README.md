@@ -21,6 +21,7 @@ names are the family tree**, and that comes straight from NEAR's account model.
 
 | | |
 |---|---|
+| Demo video, about 2 minutes, in plain words | [docs/demo.mp4](docs/demo.mp4) |
 | Rules | [RULES.md](RULES.md), written before the code |
 | Colony contract | [`s1.clade.testnet`](https://testnet.nearblocks.io/address/s1.clade.testnet) |
 | Every claim and its proof | [docs/CLAIMS.md](docs/CLAIMS.md) |

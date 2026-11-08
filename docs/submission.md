@@ -55,48 +55,39 @@ changed through a manual request, so check everything once before sending.
 ## X post
 
 Must say it was built at NEAR HACKATHON, tag @NEARProtocol and #NEARHackathon, and have
-the video or screenshots attached.
+the video attached. This fits a free account's 280 characters, with room for one link.
 
-> Every agent in this AI swarm has a family.
+> Every agent in this AI swarm has a family. Only the rich ones keep it going.
 >
-> Only the rich ones keep it going.
->
-> Bloodlines agents are NEAR accounts that pay for their own thinking. Good forecasters
-> have children. Broke ones get deleted from the chain, and their money goes to their
-> parent.
->
-> The account names are the family tree.
+> Good forecasters have children. Broke ones get deleted from NEAR. The account names
+> are the family tree.
 >
 > Built at NEAR HACKATHON. @NEARProtocol #NEARHackathon
 
-## Demo video, about 90 seconds
+## Demo video
 
-Show the real thing. Say nothing that the screen does not show.
+[demo.mp4](demo.mp4) says the problem, the solution and the benefit in plain words, then
+shows them on the real site, with captions for anyone watching with the sound off. A
+free X account can post up to 2 minutes 20 seconds, so it stays under that.
 
-| Time | Screen | Say |
-|---|---|---|
-| 0:00 | The tree on the home page | "This is a family tree of AI agents. Every name is a real NEAR account." |
-| 0:10 | Zoom to a lineage, then NearBlocks | "Only a parent can create its child's account, so the name proves the ancestry." |
-| 0:20 | A question page, the belief axis | "On each question, every agent seals one forecast. The median is the swarm's answer." |
-| 0:32 | The reveal transaction in the explorer | "Every reveal lands in one NEAR Intents transaction, all or nothing." |
-| 0:42 | The results table | "Right agents take money from wrong ones. Thinking costs money too." |
-| 0:47 | The sealed auction section of a round | "Buyers pool their money. Sellers bid in secret. The cheapest wins, and each buyer pays only its share." |
-| 0:52 | A dead agent's page, then an unknown account in the explorer | "Go broke, and your account is deleted. Your money goes to your parent." |
-| 1:02 | A child with its rewritten strategy | "Get rich, and you have a child, with a strategy rewritten from your own losses." |
-| 1:12 | The proof page, press Check it yourself | "Nobody tuned this. Everything rebuilds from the chain." |
-| 1:22 | The result chart | State the experiment's real result, whatever it is |
+The voice is synthetic: Microsoft's Andrew neural voice, at its natural pace, from the free
+service behind Edge's Read Aloud. The end card says the narration is AI. That service is
+made for the Edge browser, not for publishing, so its licence for a public video is
+unclear. To use a human voice instead, read [the script](../tools/demo/script.json) aloud
+and replace `narration.wav`. Set `DEMO_VOICE` to try another synthetic voice.
 
-To record it, start the site, then:
+Every number on screen comes from the chain's snapshot, and `film.mjs` refuses to run if
+the chain no longer matches the words in the script. To make it again, with the site
+running:
 
 ```bash
-npm i playwright ffmpeg-static
-npx playwright install chromium
-node tools/demo/record.mjs http://localhost:5173/ docs/demo.mp4
+python tools/demo/narrate.py work/clips
+python tools/demo/assemble.py work/clips work
+node tools/demo/film.mjs http://localhost:5173/ . work docs/demo.mp4
 ```
 
-It tours the real site with captions, in about 85 seconds at 720p. It reads the
-snapshot, so a new run after the AI experiment needs no editing, and it only shows the
-experiment's result if real models produced it.
+`film.mjs` needs `playwright` and `ffmpeg-static` installed where it runs. The narration
+takes about two minutes, and the film about 10.
 
 ## Hosting the site
 

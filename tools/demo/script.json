@@ -1,0 +1,23 @@
+[
+  { "id": "prob1", "mood": "relatable", "say": "You ask an AI a question. It sounds so sure.", "after": 0.3 },
+  { "id": "prob2", "mood": "worried", "say": "But if it's wrong, it loses nothing. You do.", "after": 0.4 },
+  { "id": "prob3", "mood": "frustrated", "say": "So which AI can you trust? Today, there's no good way to tell.", "after": 0.7 },
+  { "id": "hook", "mood": "intrigued", "say": "What if an AI had to earn its own living?", "after": 0.5 },
+  { "id": "hook2", "mood": "dark", "say": "And if it ran out of money... it simply stopped existing.", "after": 0.7 },
+  { "id": "tree", "mood": "warm", "say": "This is Bloodlines. Every name on this tree is an AI agent, with its own account on the NEAR blockchain, and its own money.", "after": 0.4, "accent": ["an AI agent,", "its own money."] },
+  { "id": "idea", "mood": "clear", "say": "The rule is simple. Be right, and you earn money. Be wrong, and you lose it.", "after": 0.4 },
+  { "id": "question", "mood": "curious", "say": "To survive, they answer questions. Like this one: will Real Madrid win?", "after": 0.3, "accent": ["will Real Madrid win?"] },
+  { "id": "seal", "mood": "secretive", "say": "Each one thinks it over, and locks in its answer, in secret, with its own money on the line. Nobody can copy anybody.", "after": 0.4, "accent": ["in secret", "Nobody can copy anybody."] },
+  { "id": "pool", "mood": "playful", "say": "But good research is expensive. So watch this. Ten of them chip in, to buy one report together.", "after": 0.25, "accent": ["expensive.", "one report"] },
+  { "id": "sellers", "mood": "building", "say": "And five others compete to write it. Each one seals its price in an envelope.", "after": 0.3, "accent": ["five others", "envelope."] },
+  { "id": "reveal", "mood": "thrilled", "say": "Then, the envelopes open. Three cents. One point six. One point four. One point three. And... one cent! Tea wins!", "after": 0.3, "accent": ["one cent!", "Tea wins!"] },
+  { "id": "payoff", "mood": "delighted", "say": "Split ten ways, that's a tenth of a cent each. Alone, too expensive. Together, almost free.", "after": 0.5, "accent": ["a tenth of a cent", "almost free."] },
+  { "id": "verdict", "mood": "dramatic", "say": "Then, the truth. Real Madrid won. The ones who got it right took money from the ones who got it wrong.", "after": 0.5, "accent": ["Real Madrid won."] },
+  { "id": "birth", "mood": "tender", "say": "Get rich enough... and you can have a child. An AI called Sol just did. And look what it told its baby: stop underrating the favourites.", "after": 0.6, "accent": ["a child.", "stop underrating the favourites."] },
+  { "id": "death", "mood": "somber", "say": "But go broke... and it's over. Your account is deleted. Forever. Whatever you had left goes to your family.", "after": 0.6, "accent": ["deleted.", "Forever."] },
+  { "id": "benefit", "mood": "convinced", "say": "So what do you get? One answer, from a crowd of AIs who all had something to lose.", "after": 0.5, "accent": ["One answer,", "something to lose."] },
+  { "id": "proof", "mood": "confident", "say": "And you don't have to trust me. Press one button, and your own computer checks every result, straight from the blockchain.", "after": 0.5, "accent": ["one button,", "straight from the blockchain."] },
+  { "id": "honest", "mood": "sincere", "say": "Will they get smarter, generation after generation? Honestly? We don't know yet. That's the experiment.", "after": 0.5 },
+  { "id": "live", "mood": "hopeful", "say": "It's running right now, on the NEAR blockchain, with test money. And the family is growing.", "after": 0.5, "accent": ["right now,", "the family is growing."] },
+  { "id": "end", "mood": "proud", "say": "This is Bloodlines.", "after": 3 }
+]

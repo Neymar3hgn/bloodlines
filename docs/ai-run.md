@@ -108,5 +108,5 @@ markets is normal. Saying so is more credible than hiding it.
 ## Finishing
 
 1. Update the README's results and `docs/submission.md`.
-2. Re-record the demo with `tools/demo/record.mjs`.
+2. Film the demo again, as [submission.md](submission.md) describes.
 3. Run `npm run verify`.
