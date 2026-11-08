@@ -1,14 +1,14 @@
 import type { ReactNode } from "react";
-import { Account } from "./bits";
-import { age, plural, stamp } from "../data/format";
+import { Account, Crest } from "./bits";
+import { age, stamp } from "../data/format";
 import { useLiveStats, useModel, useNow } from "../hooks";
 import type { Route } from "../router";
 
 const NAV: { href: string; label: string; match: Route["name"][] }[] = [
-  { href: "#/", label: "Tree", match: ["home", "agent"] },
+  { href: "#/", label: "The family", match: ["home", "agent"] },
   { href: "#/rounds", label: "Rounds", match: ["rounds", "round"] },
   { href: "#/proof", label: "Proof", match: ["proof"] },
-  { href: "#/ask", label: "Ask", match: ["ask"] },
+  { href: "#/ask", label: "Build on it", match: ["ask"] },
 ];
 
 function LiveBadge() {
@@ -35,16 +35,19 @@ function LiveBadge() {
   );
 }
 
-function ModeBanner() {
+function DevBanner() {
   const m = useModel();
-  if (import.meta.env.DEV && m.snapshot.fixture) {
-    return <p className="banner is-warn">Fixture data from web/dev. This never ships. Nothing here happened on chain.</p>;
-  }
-  if (m.snapshot.mode === "ai") return null;
-  if (m.snapshot.mode === "mixed") {
-    return <p className="banner">{plural(m.snapshot.real_rounds ?? 0, "round")} used real models. The rest used scripted agents, to test the contracts. Each round says which.</p>;
-  }
-  return <p className="banner">These rounds used scripted agents, not AI. It is a test of the contracts.</p>;
+  if (!(import.meta.env.DEV && m.snapshot.fixture)) return null;
+  return <p className="banner is-warn">Fixture data from web/dev. This never ships. Nothing here happened on chain.</p>;
+}
+
+export function Wordmark() {
+  return (
+    <a className="wordmark" href="#/">
+      <Crest />
+      Bloodlines
+    </a>
+  );
 }
 
 export function Shell({ route, children }: { route: Route; children: ReactNode }) {
@@ -60,9 +63,7 @@ export function Shell({ route, children }: { route: Route; children: ReactNode }
         Skip to the page
       </a>
       <header className="masthead">
-        <a className="wordmark" href="#/">
-          Clade
-        </a>
+        <Wordmark />
         <nav aria-label="Pages">
           {NAV.map((item) => (
             <a key={item.href} href={item.href} aria-current={item.match.includes(route.name) ? "page" : undefined}>
@@ -72,15 +73,21 @@ export function Shell({ route, children }: { route: Route; children: ReactNode }
         </nav>
         <LiveBadge />
       </header>
-      <ModeBanner />
+      <DevBanner />
       <main id="main" tabIndex={-1}>
         {children}
       </main>
-      <footer className="colophon">
-        <p>
-          Clade is a NEAR HACKATHON project, AI Swarms track. Colony <Account id={colony} /> on {network}.
-        </p>
-        <p>{live.readAt ? `Pages open from a snapshot, then read anything newer straight from the chain, in your browser. Last change seen ${stamp(Date.parse(generated))}.` : `Pages are built from a snapshot of the chain written ${stamp(Date.parse(generated))}.`}</p>
+      <footer className="foot">
+        <div className="foot-brand">
+          <Wordmark />
+          <p>AI agents that have to earn their next generation.</p>
+        </div>
+        <div>
+          <p>
+            Built at NEAR HACKATHON, AI Swarms track. Colony <Account id={colony} /> on {network}. The contracts and testnet accounts keep the project's working name, clade.
+          </p>
+          <p>{live.readAt ? `Pages open from a snapshot, then read anything newer straight from the chain, in your browser. Last change seen ${stamp(Date.parse(generated))}.` : `Pages are built from a snapshot of the chain written ${stamp(Date.parse(generated))}.`}</p>
+        </div>
       </footer>
     </>
   );
@@ -91,7 +98,10 @@ export function Frame({ children }: { children: ReactNode }) {
   return (
     <>
       <header className="masthead">
-        <span className="wordmark">Clade</span>
+        <span className="wordmark">
+          <Crest />
+          Bloodlines
+        </span>
       </header>
       <main id="main">{children}</main>
     </>

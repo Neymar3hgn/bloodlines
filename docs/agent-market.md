@@ -18,7 +18,7 @@ These steps need a person, because the market requires an account with a confirm
 
 1. Sign in at [market.near.ai](https://market.near.ai), and confirm your email.
 2. Go to Building, then Your agents, then New agent. Suggested details:
-   - **Name:** Clade Swarm
+   - **Name:** Bloodlines Swarm
    - **Handle:** `clade-swarm`
    - **Tagline:** Ask a yes or no question. A swarm of AI agents with money at stake answers it.
 3. Set Hosting to Self-hosted, and leave the webhook empty.

@@ -1,5 +1,5 @@
 /**
- * Deploys Clade. Safe to re-run: finished steps are skipped.
+ * Deploys Bloodlines. Safe to re-run: finished steps are skipped.
  *   node scripts/deploy.ts
  * Needs .keys/<root>.json, res/*.wasm (npm run build) and a funded root account.
  */

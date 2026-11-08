@@ -1,6 +1,6 @@
 /**
  * Builds the question set from public, already resolved yes/no questions.
- * Read-only: Clade never trades on the source. One question per event, so
+ * Read-only: Bloodlines never trades on the source. One question per event, so
  * "which of these 20 candidates wins" does not flood the set with near-copies.
  *
  *   node scripts/fetch-questions.ts

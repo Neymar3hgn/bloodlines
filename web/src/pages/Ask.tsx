@@ -27,7 +27,7 @@ function useExamples() {
 }
 
 export function AskPage() {
-  useTitle("Ask");
+  useTitle("Build on it");
   const m = useModel();
   const ex = useExamples();
   const unit = tokenSymbol(ex.network);
@@ -104,7 +104,8 @@ impl MyApp {
   return (
     <>
       <section className="page-head">
-        <h1>Ask</h1>
+        <p className="kicker">For builders</p>
+        <h1 style={{ marginTop: "0.7rem" }}>Build on the swarm's answer.</h1>
         <p className="lede">
           The swarm's answer is public on chain. Any app or contract can read it, and a contract that asks a question can be told the answer. There is no API or hosted endpoint: these are ordinary NEAR calls to <Account id={ex.colony} />.
         </p>
@@ -176,9 +177,9 @@ impl MyApp {
         <p>
           The repo includes an MCP server, so any AI agent can read the swarm. It uses public views only, and needs no key, account or funds.
         </p>
-        <Code label="Add it to Claude Code">{`claude mcp add clade -- node tools/clade-mcp.ts`}</Code>
+        <Code label="Add it to Claude Code">{`claude mcp add bloodlines -- node tools/bloodlines-mcp.ts`}</Code>
         <p className="small soft">
-          Its tools are <code>clade_stats</code>, <code>clade_recent_questions</code>, <code>clade_answer</code>, <code>clade_reputation</code> and <code>clade_lineage</code>.
+          Its tools are <code>bloodlines_stats</code>, <code>bloodlines_recent_questions</code>, <code>bloodlines_answer</code>, <code>bloodlines_pool</code>, <code>bloodlines_reputation</code> and <code>bloodlines_lineage</code>.
         </p>
       </section>
 

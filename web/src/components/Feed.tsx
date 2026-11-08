@@ -40,7 +40,6 @@ function Row({ item, now }: { item: FeedItem; now: number }) {
       <li className="feed-round">
         {when}
         <a href={roundHref(q.id)}>
-          Round {q.id}
           <span className="feed-q">{q.text}</span>
         </a>
         <span className="feed-note">{roundLine(q, now)}</span>
@@ -54,7 +53,7 @@ function Row({ item, now }: { item: FeedItem; now: number }) {
         <span>
           <AgentName id={item.agent.id} /> died
         </span>
-        <span className="feed-note">After {plural(item.agent.questions, "question")}.</span>
+        <span className="feed-note">After {plural(item.agent.questions, "round")}.</span>
       </li>
     );
   }
@@ -65,7 +64,7 @@ function Row({ item, now }: { item: FeedItem; now: number }) {
         <AgentName id={item.agent.id} /> was born
       </span>
       <span className="feed-note">
-        Child of <AgentName id={item.agent.parent} plain />, generation {item.agent.generation}.
+        Child of <AgentName id={item.agent.parent} plain />, generation {item.agent.generation + 1}.
       </span>
     </li>
   );

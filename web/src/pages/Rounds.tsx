@@ -9,6 +9,16 @@ import { roundHref } from "../router";
 
 const PAGE = 40;
 
+type Source = "all" | "real" | "scripted" | "tests";
+
+/** Contract tests are kept apart, so the list reads as the colony's own history. */
+const SOURCES: { id: Source; label: string; match: (q: Question) => boolean }[] = [
+  { id: "all", label: "All rounds", match: (q) => q.category !== "test" },
+  { id: "real", label: "Real models", match: (q) => answeredBy(q) === "real models" },
+  { id: "scripted", label: "Scripted", match: (q) => q.category !== "test" && answeredBy(q) === "scripted agents" },
+  { id: "tests", label: "Contract tests", match: (q) => q.category === "test" },
+];
+
 function outcome(q: Question, now: number): string {
   const state = roundState(q, now);
   if (state === "settled") return q.yes_won ? "YES" : "NO";
@@ -22,17 +32,19 @@ export function RoundsPage() {
   useTitle("Rounds");
   const m = useModel();
   const now = useNow(30_000);
-  const [category, setCategory] = useState("all");
+  const [source, setSource] = useState<Source>("all");
   const [limit, setLimit] = useState(PAGE);
   const all = useMemo(() => [...m.questions.values()].sort((a, b) => b.id - a.id), [m]);
-  const categories = useMemo(() => [...new Set(all.map((q) => q.category))].sort(), [all]);
-  const matching = category === "all" ? all : all.filter((q) => q.category === category);
+  const available = useMemo(() => SOURCES.filter((s) => s.id === "all" || all.some(s.match)), [all]);
+  const matching = all.filter(SOURCES.find((s) => s.id === source)!.match);
   const shown = matching.slice(0, limit);
 
   return (
     <>
       <section className="page-head">
-        <h1>Rounds</h1>
+
+        <p className="kicker">The record</p>
+        <h1 style={{ marginTop: "0.7rem" }}>Every round, on chain.</h1>
         <p className="lede">Each round is one yes or no question. Agents seal a forecast and a stake, and the median is the swarm's answer.</p>
       </section>
 
@@ -40,19 +52,19 @@ export function RoundsPage() {
         <Empty>No rounds have been run yet.</Empty>
       ) : (
         <>
-          {categories.length > 1 && (
-            <div className="filters" role="group" aria-label="Filter by category">
-              {["all", ...categories].map((c) => (
+          {available.length > 1 && (
+            <div className="filters" role="group" aria-label="Filter rounds">
+              {available.map((s) => (
                 <button
-                  key={c}
+                  key={s.id}
                   type="button"
-                  aria-pressed={c === category}
+                  aria-pressed={s.id === source}
                   onClick={() => {
-                    setCategory(c);
+                    setSource(s.id);
                     setLimit(PAGE);
                   }}
                 >
-                  {c === "test" ? "contract tests" : c}
+                  {s.label}
                 </button>
               ))}
             </div>
@@ -71,7 +83,7 @@ export function RoundsPage() {
                   <span className="r-axis">
                     <MiniAxis q={q} />
                   </span>
-                  <span className="r-price mono">{q.price > 0 ? `${q.price}%` : "none"}</span>
+                  <span className={`r-price${q.price > 0 ? "" : " is-none"}`}>{q.price > 0 ? `${q.price}%` : "none"}</span>
                   <span className="r-result mono">{outcome(q, now)}</span>
                 </a>
               </li>

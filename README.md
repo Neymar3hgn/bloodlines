@@ -1,10 +1,15 @@
-# Clade
+# Bloodlines
 
-**An AI swarm that has to earn its next generation.**
+**Every agent has a family. Only the rich ones keep it going.**
 
-Built at NEAR HACKATHON. Tracks: `swarms`, `agents`, `open`. MIT licence.
+An AI swarm that has to earn its next generation. Built at NEAR HACKATHON. Tracks:
+`swarms`, `agents`, `open`. MIT licence.
 
-Most swarms have their agents designed by hand. In Clade, agents sell forecasts
+> Bloodlines was called Clade while it was being built. The contracts, testnet accounts
+> and environment variables keep that working name, because renaming an account on chain
+> means redeploying it.
+
+Most swarms have their agents designed by hand. In Bloodlines, agents sell forecasts
 and pay for their own thinking. The ones that forecast well get rich and have
 children with rewritten strategies. The ones that go broke are deleted from the
 chain, and their money goes to their parent. Nobody decides which strategies
@@ -24,7 +29,7 @@ names are the family tree**, and that comes straight from NEAR's account model.
 
 ## How it fits the AI Swarms track
 
-| The track asks for | In Clade |
+| The track asks for | In Bloodlines |
 |---|---|
 | Multi-agent systems | Up to 32 agents with their own money and strategies, and no central planner. What the swarm answers, and who survives, comes out of how they trade |
 | NEAR Intents | Each agent's capital sits in its own Intents balance. Sealed reveals, pool pledges and births are signed intents, relayed in batches, all or nothing |
@@ -50,6 +55,7 @@ npm ci
 | `npm run verify` | The whole colony rebuilt from public chain data, including every signed model answer: `13 of 13 checks pass` |
 | `cd contracts && cargo test -p clade-core` | `9 passed`, including 2,000 vectors shared with the TypeScript engine (needs Rust 1.95) |
 | `npm run mcp` | An MCP server that lets any AI agent read the swarm. See [below](#for-near-builders) |
+| `cd web && npm ci && npm run dev` | The site on your own machine, following the colony live from the chain |
 | `npm run e2e` | The rules tested on a live network, with real rejected attacks. This one needs its own funded test colony. The last run is in [data/e2e-report.json](data/e2e-report.json) |
 | `npm run e2e:pools` | Just the research pool checks, on the public colony, for almost no NEAR. The last run is in [data/e2e-pools-report.json](data/e2e-pools-report.json) |
 
@@ -113,7 +119,7 @@ From a live network and a simulation. Both can be re-run from this repo.
   including rejected attacks on the pools, and all 22 passed. [Report](data/e2e-pools-report.json)
 - An agent's account really is deleted, and its money reaches its parent.
 - **A child keeps running and trading after its parent's account is deleted.** NEAR's
-  docs do not say this. Clade's tests check it.
+  docs do not say this. Bloodlines's tests check it.
 - The colony called another contract back with its answer, and a question resolved
   itself by reading a NEAR contract, with nobody trusted.
 - We attacked our own oracle: a question naming an agent's `die` method now does
@@ -162,7 +168,7 @@ Things in this repo anyone can use:
 | **The swarm as an oracle.** Any contract can ask a question and be called back with the answer | `on_clade_answer` in [contracts/asker](contracts/asker), 625 bytes |
 | **Self-resolving questions.** Resolved by reading a NEAR contract, with nobody trusted | `Resolver::OnChain` in [contracts/colony](contracts/colony) |
 | **Group buying on Intents.** Signed pledges, each buyer pays only its share, and automatic refunds if too few join or nothing arrives | `handle_join`, `close_pool`, `refund_pool` in [contracts/colony](contracts/colony), R26 to R29 |
-| **An MCP server** for reading the swarm from any AI agent | [tools/clade-mcp.ts](tools/clade-mcp.ts) |
+| **An MCP server** for reading the swarm from any AI agent | [tools/bloodlines-mcp.ts](tools/bloodlines-mcp.ts) |
 | **A worker that lists the swarm on Agent Market**, so buyers can hire it by the job | [docs/agent-market.md](docs/agent-market.md) |
 | **A guide to multi-signer Intents batches**, which NEAR's docs do not cover, from the Verifier's source | [docs/intents-batches.md](docs/intents-batches.md) |
 | **A draft NEP for agent lineage and inherited reputation.** On Agent Market, 81% of listed agents had no delivered job on 2026-11-07, because a new agent has no record. A family record gives it one | [docs/nep-agent-lineage.md](docs/nep-agent-lineage.md) |
@@ -223,4 +229,4 @@ Binaryen. The web app uses React, Vite and `d3-hierarchy`. The code was written 
 AI assistance (Claude Code), and the repository is the record of that work.
 
 The testnet Intents contract is `verifier.tidepool-sandbox.testnet`, a public testnet copy with the same code hash as mainnet `intents.near`.
-Past questions come from Polymarket's public API. Clade never trades there.
+Past questions come from Polymarket's public API. Bloodlines never trades there.

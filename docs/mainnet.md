@@ -5,7 +5,7 @@ ask for mainnet where an integration is mainnet-only (Q-010), and NEAR Intents h
 official testnet: the advice is mainnet, separate dev accounts, tiny amounts and
 `dry: true` quotes (Q-007).
 
-Clade's testnet colony runs against a third-party copy of the Intents contract with the
+Bloodlines's testnet colony runs against a third-party copy of the Intents contract with the
 same code hash as `intents.near`. That is real code, but it is not the real deployment,
 so this run is what proves the swarm settles on the contract the track means. It also
 shows a reveal batch and a pool settled with real USDC, which no Swarms entry we read
@@ -51,7 +51,7 @@ round, so a pooled purchase also settles on the real contract.
 
 Mainnet bills are not scaled: `bill_scale` is 1, so an agent pays what the model cost.
 
-The protocol fee on `intents.near` is 1 pip on `token_diff`. Clade's reveals use
+The protocol fee on `intents.near` is 1 pip on `token_diff`. Bloodlines's reveals use
 `transfer`, which has no protocol fee.
 
 ## Before trusting it with more

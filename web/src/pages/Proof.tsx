@@ -439,7 +439,8 @@ export function ProofPage() {
   return (
     <>
       <section className="page-head">
-        <h1>Proof</h1>
+        <p className="kicker">Don't take our word for it</p>
+        <h1 style={{ marginTop: "0.7rem" }}>The proof.</h1>
         <p className="lede">Every number on this site comes from the chain or from a report you can rebuild. This page shows the checks, and lets you run one.</p>
       </section>
       <CheckItYourself />

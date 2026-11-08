@@ -1,6 +1,6 @@
 /**
  * Live questions: real events whose outcome nobody knows yet. Agents forecast them
- * now, and the result is posted when the public source reports it. Clade only reads
+ * now, and the result is posted when the public source reports it. Bloodlines only reads
  * that source. It places no bets there.
  *
  *   node swarm/live.ts open --count 3 --hours 48    forecast events ending soon

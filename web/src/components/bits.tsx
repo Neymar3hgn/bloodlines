@@ -1,19 +1,22 @@
 /** Small shared pieces of the page. */
 import { useState, type ReactNode } from "react";
 import { explorerUrl } from "../data/live";
-import { inkVar } from "../data/model";
 import { money, tokenSymbol, type Units } from "../data/format";
 import { useModel } from "../hooks";
 import { agentHref } from "../router";
 
-/** A short stroke of the lineage's ink, beside the text that names it. */
-export function Ink({ id }: { id: string }) {
-  const m = useModel();
-  return <span className="ink-key" style={{ background: inkVar(m, id) }} aria-hidden="true" />;
+/** A drop of blood with a family tree inside it. */
+export function Crest({ size = 22 }: { size?: number }) {
+  return (
+    <svg className="crest" width={size} height={size * 1.16} viewBox="0 0 24 28" aria-hidden="true">
+      <path fill="#e0223d" d="M12 1S3 12 3 18a9 9 0 0 0 18 0C21 12 12 1 12 1Z" />
+      <path fill="none" stroke="#09080b" strokeWidth="1.8" strokeLinecap="round" d="M12 24v-9m0 5.2-4-4.2m4 1.6 3.6-3.6" />
+    </svg>
+  );
 }
 
-/** An agent's name, its lineage ink and a link to its page. Works for accounts that are not agents too. */
-export function AgentName({ id, full = false, plain = false }: { id: string; full?: boolean; plain?: boolean }) {
+/** An agent's name and a link to its page. Works for accounts that are not agents too. */
+export function AgentName({ id, full = false }: { id: string; full?: boolean; plain?: boolean }) {
   const m = useModel();
   const agent = m.agents.get(id);
   if (!agent) {
@@ -23,7 +26,6 @@ export function AgentName({ id, full = false, plain = false }: { id: string; ful
   const name = full ? agent.id : agent.label;
   return (
     <a className={`agent-name${dead ? " is-dead" : ""}`} href={agentHref(agent.id)}>
-      {!plain && <Ink id={agent.id} />}
       <span className="mono">
         {dead && <span aria-label="dead">† </span>}
         {name}
@@ -60,7 +62,7 @@ export function NotFound({ title, children }: { title: string; children: ReactNo
       <h1>{title}</h1>
       <p>{children}</p>
       <p>
-        <a href="#/">Back to the family tree</a>
+        <a href="#/">Back to the family</a>
       </p>
     </section>
   );

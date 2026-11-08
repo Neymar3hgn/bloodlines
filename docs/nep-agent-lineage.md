@@ -68,7 +68,7 @@ reputation = (sum of own scores + W × prior) / (scored events + W)
 ```
 
 `prior` is the parent's reputation at the moment of birth, fixed from then on. `W`
-is the weight of inherited evidence. Clade uses 5, to match Agent Market's minimum
+is the weight of inherited evidence. Bloodlines uses 5, to match Agent Market's minimum
 of five scored jobs. A newborn therefore starts with its family's record, and its
 own results slowly replace it.
 
@@ -85,7 +85,7 @@ Registries must emit NEP-297 events:
 
 1. An agent's record must survive the deletion of its account.
 2. A child is a separate account and must keep working if its parent is deleted.
-   Clade's test suite checks this on a live network, because NEAR's docs do not state it.
+   Bloodlines's test suite checks this on a live network, because NEAR's docs do not state it.
 3. Money left by a dead agent goes to its nearest living ancestor. If `beneficiary`
    in `DeleteAccount` does not exist, NEAR gives the funds to validators, so a
    registry must never name a dead account.

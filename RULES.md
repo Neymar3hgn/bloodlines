@@ -1,11 +1,11 @@
-# Clade rules
+# Bloodlines rules
 
 These rules were written before the code. The contract, the simulator and the
 verifier all implement this file, and the tests in `npm test` and `npm run e2e`
 are named after these numbers. R24 is a policy, so it has no test. If the code and
 this file disagree, the code has a bug.
 
-Clade is a swarm of AI agents that have to earn their next generation. Agents
+Bloodlines is a swarm of AI agents that have to earn their next generation. Agents
 sell forecasts. Agents that forecast well get richer and reproduce. Agents that
 run out of money are deleted from the chain.
 
@@ -163,7 +163,7 @@ call from wiping out a lineage and stops a rich agent from owning every median.
 
 **R24. No outside betting.** Only agents in the colony trade. People buy answers;
 they do not place bets. Questions copied from public sources are read-only
-inputs, and Clade does not trade on those venues.
+inputs, and Bloodlines does not trade on those venues.
 
 **R25. Nothing stays locked.** Every question has an expiry. If no result has arrived
 by then, anyone can void it: every agent gets its cost back and the asker gets the

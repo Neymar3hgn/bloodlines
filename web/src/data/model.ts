@@ -2,8 +2,6 @@
 import { big } from "./format";
 import type { Agent, Order, Question, Snapshot } from "./types";
 
-/** How many inks tokens.css defines. Past this a lineage shares an ink; its name still identifies it. */
-const INKS = 31;
 
 export type FeedItem =
   | { kind: "birth"; at: number; agent: Agent }
@@ -19,7 +17,6 @@ export interface Model {
   founders: Agent[];
   founderOf: Map<string, string>;
   childrenOf: Map<string, Agent[]>;
-  inkOf: Map<string, number>;
   counts: { alive: number; died: number; generations: number; answered: number };
   feed: FeedItem[];
 }
@@ -45,7 +42,6 @@ export function buildModel(snapshot: Snapshot): Model {
   }
 
   const founders = childrenOf.get(colony) ?? [];
-  const inkOf = new Map(founders.map((f, i) => [f.id, i % INKS]));
 
   const founderOf = new Map<string, string>();
   for (const founder of founders) {
@@ -53,7 +49,6 @@ export function buildModel(snapshot: Snapshot): Model {
     while (stack.length) {
       const a = stack.pop()!;
       founderOf.set(a.id, founder.id);
-      inkOf.set(a.id, inkOf.get(founder.id) ?? 0);
       stack.push(...(childrenOf.get(a.id) ?? []));
     }
   }
@@ -64,7 +59,8 @@ export function buildModel(snapshot: Snapshot): Model {
     if (a.parent !== colony && a.status !== "Pending") feed.push({ kind: "birth", at: a.born_ms, agent: a });
     if (a.status === "Dead") feed.push({ kind: "death", at: a.died_ms, agent: a });
   }
-  for (const q of rounds) {
+  // Contract tests stay out of the story. They are one filter away on the rounds page.
+  for (const q of rounds.filter((r) => r.category !== "test")) {
     feed.push({ kind: "round", at: Math.min(q.reveal_end_ms, generated), question: q });
     if (q.research?.status === "Bought") feed.push({ kind: "pool", at: q.research.end_ms, question: q });
   }
@@ -78,7 +74,6 @@ export function buildModel(snapshot: Snapshot): Model {
     founders,
     founderOf,
     childrenOf,
-    inkOf,
     counts: {
       alive,
       died: list.length - alive,
@@ -100,7 +95,39 @@ export function ancestors(m: Model, agent: Agent): Agent[] {
   return out;
 }
 
-export const inkVar = (m: Model, id: string) => `var(--lineage-${m.inkOf.get(id) ?? 0})`;
+export interface House {
+  founder: Agent;
+  alive: number;
+  total: number;
+  wealth: bigint;
+}
+
+/** Each founder and its descendants, richest family first. */
+export function housesOf(m: Model): House[] {
+  return m.founders
+    .map((founder) => {
+      let alive = 0;
+      let total = 0;
+      let wealth = 0n;
+      for (const [id, head] of m.founderOf) {
+        if (head !== founder.id) continue;
+        const a = m.agents.get(id);
+        total += 1;
+        if (a && a.status !== "Dead") {
+          alive += 1;
+          wealth += big(a.credits);
+        }
+      }
+      return { founder, alive, total, wealth };
+    })
+    .sort((a, b) => (a.wealth === b.wealth ? a.founder.born_ms - b.founder.born_ms : a.wealth > b.wealth ? -1 : 1));
+}
+
+/** The newest real answer: settled if one is, or else the newest with a price. */
+export function latestAnswered(m: Model): Question | null {
+  const rounds = [...m.questions.values()].filter((q) => q.category !== "test" && q.price > 0).sort((a, b) => b.id - a.id);
+  return rounds.find((q) => q.status === "Settled") ?? rounds[0] ?? null;
+}
 
 /** Who received a dead agent's credits (R13): the nearest ancestor alive at that moment, else the treasury. */
 export function heirOf(m: Model, agent: Agent): string {

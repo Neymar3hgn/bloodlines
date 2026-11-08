@@ -32,7 +32,7 @@ for (let s = 1; s <= seeds; s++) {
 const sel = runs.map((r) => summarize(r.buckets));
 const ctl = controls.map((r) => summarize(r.buckets));
 
-console.log(`Clade simulation: ${DEFAULTS.founders} founders, ${DEFAULTS.questions} questions, ${seeds} seeds, no model calls\n`);
+console.log(`Bloodlines simulation: ${DEFAULTS.founders} founders, ${DEFAULTS.questions} questions, ${seeds} seeds, no model calls\n`);
 console.log("One colony, seed 1:");
 console.log(" questions   truth error   price score  alive  gen  births  deaths   noise   herd  confidence");
 for (const b of runs[0].buckets) {

@@ -2,8 +2,8 @@
  * An MCP server, so any AI agent can read the swarm. It only uses public contract
  * views: no keys, no account and no funds. Run it over stdio:
  *
- *   node tools/clade-mcp.ts
- *   claude mcp add clade -- node tools/clade-mcp.ts
+ *   node tools/bloodlines-mcp.ts
+ *   claude mcp add bloodlines -- node tools/bloodlines-mcp.ts
  *
  * Set CLADE_COLONY and CLADE_RPC to point it at another colony.
  */
@@ -39,13 +39,13 @@ const questionArg = { type: "object", properties: { question_id: { type: "intege
 
 const TOOLS = [
   {
-    name: "clade_stats",
+    name: "bloodlines_stats",
     description: "How many agents are alive, how many have ever lived, and how many questions the swarm has answered.",
     inputSchema: { type: "object", properties: {} },
     run: () => view("get_stats"),
   },
   {
-    name: "clade_recent_questions",
+    name: "bloodlines_recent_questions",
     description: "The swarm's most recent questions and answers. `price` is the swarm's probability of YES, from 1 to 99.",
     inputSchema: { type: "object", properties: { limit: { type: "integer", default: 10 } } },
     run: async (a: any) => {
@@ -56,25 +56,25 @@ const TOOLS = [
     },
   },
   {
-    name: "clade_answer",
+    name: "bloodlines_answer",
     description: "The swarm's answer to one question: the stake-weighted median of sealed forecasts by agents with money at risk.",
     inputSchema: questionArg,
     run: (a: any) => view("get_answer", { q: a.question_id }),
   },
   {
-    name: "clade_pool",
+    name: "bloodlines_pool",
     description: "The research pool on a question, if it has one: who bought the briefing, the price, and what each agent paid.",
     inputSchema: { type: "object", properties: { question_id: { type: "number" } }, required: ["question_id"] },
     run: (a: any) => view("get_pool", { q: a.question_id }),
   },
   {
-    name: "clade_reputation",
+    name: "bloodlines_reputation",
     description: "An agent's reputation. Positive means it beats the swarm on average. A newborn starts from its parent's score, worth five questions of evidence.",
     inputSchema: accountArg,
     run: async (a: any) => ({ agent: a.agent, reputation: await view("get_reputation", { id: a.agent }), record: await view("get_agent", { id: a.agent }) }),
   },
   {
-    name: "clade_lineage",
+    name: "bloodlines_lineage",
     description: "An agent's ancestors, nearest first, including dead ones.",
     inputSchema: accountArg,
     run: (a: any) => view("get_lineage", { id: a.agent }),
@@ -99,7 +99,7 @@ for await (const raw of createInterface({ input: process.stdin })) {
   }
   const { id, method, params } = msg;
   if (method === "initialize") {
-    reply(id, { protocolVersion: params?.protocolVersion ?? "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "clade", version: "0.1.0" } });
+    reply(id, { protocolVersion: params?.protocolVersion ?? "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: "bloodlines", version: "0.1.0" } });
   } else if (method === "notifications/initialized") {
     continue;
   } else if (method === "ping") {

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Account, AgentName, Empty, Money, NotFound } from "../components/bits";
 import { wordDiff } from "../data/diff";
 import { big, column, date, money, plural, signed, stamp, tokenSymbol } from "../data/format";
-import { ancestors, heirOf, inkVar, net, SIDE_NAME } from "../data/model";
+import { ancestors, heirOf, net, SIDE_NAME } from "../data/model";
 import type { Agent, Genome } from "../data/types";
 import { useModel, useTitle } from "../hooks";
 import { roundHref } from "../router";
@@ -18,9 +18,9 @@ function Lineage({ agent }: { agent: Agent }) {
             {m.snapshot.colony}
           </a>
         </li>
-        {line.map((a, i) => (
+        {line.map((a) => (
           <li key={a.id}>
-            <AgentName id={a.id} plain={i > 0} />
+            <AgentName id={a.id} />
           </li>
         ))}
         <li aria-current="page">
@@ -35,7 +35,7 @@ function Lineage({ agent }: { agent: Agent }) {
 }
 
 function statusLine(agent: Agent): string {
-  const role = agent.generation === 0 ? "Founder" : `Generation ${agent.generation}`;
+  const role = agent.generation === 0 ? "Founder" : `Generation ${agent.generation + 1}`;
   const state = agent.status === "Pending" ? "being created" : agent.status === "Dead" ? "dead" : "alive";
   return `${role}, ${state}. Born ${stamp(agent.born_ms)}.`;
 }
@@ -78,12 +78,8 @@ function Orphaned({ agent }: { agent: Agent }) {
 }
 
 function Facts({ agent }: { agent: Agent }) {
-  const m = useModel();
-  const unit = tokenSymbol(m.snapshot.network);
-  const dead = agent.status === "Dead";
   const rows: [string, string][] = [
-    ["Balance", dead ? "none" : `${money(agent.credits)} ${unit}`],
-    ["Questions", agent.questions.toLocaleString()],
+    ["Rounds", agent.questions.toLocaleString()],
     ["Won", money(agent.won)],
     ["Lost", money(agent.lost)],
     ["Rewards", money(agent.rewards)],
@@ -197,7 +193,7 @@ function GenomeTable({ agent, parent }: { agent: Agent; parent: Agent | undefine
             <li key={name}>
               <span>{name}</span>
               <span className="meter" aria-hidden="true">
-                <i style={{ width: `${value * 100}%`, background: "var(--ink-2)" }} />
+                <i style={{ width: `${value * 100}%`, background: "var(--gold)" }} />
               </span>
               <span className="mono">{Math.round(value * 100)}%</span>
             </li>
@@ -298,15 +294,22 @@ export function AgentPage({ id }: { id: string }) {
   return (
     <article className="agent">
       <Lineage agent={agent} />
-      <header className="agent-head">
-        <h1 style={{ borderColor: inkVar(m, agent.id) }}>
-          {dead && <span className="dagger">† </span>}
-          {agent.label}
-        </h1>
-        <p>{statusLine(agent)}</p>
-        <p>
-          <Account id={agent.id} />
-        </p>
+      <header className="agent-top">
+        <div>
+          <p className="kicker">{agent.generation === 0 ? "A founding house" : `The house of ${m.agents.get(m.founderOf.get(agent.id) ?? "")?.label ?? "an unknown founder"}`}</p>
+          <h1>
+            {dead && <span className="dagger">† </span>}
+            {agent.label}
+          </h1>
+          <p>{statusLine(agent)}</p>
+          <p>
+            <Account id={agent.id} />
+          </p>
+        </div>
+        <div className="answer-card">
+          <span className={dead ? "big-text" : "big-num"}>{dead ? "Deleted" : money(agent.credits)}</span>
+          {!dead && <span className="kicker">{tokenSymbol(m.snapshot.network)} held</span>}
+        </div>
       </header>
       {dead && <Obituary agent={agent} />}
       <Orphaned agent={agent} />

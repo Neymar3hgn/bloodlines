@@ -7,19 +7,25 @@ import type { Order, Question } from "../data/types";
 import { useModel, useNow, useTitle } from "../hooks";
 import { roundHref } from "../router";
 
-function headline(q: Question, state: RoundState): string {
+/** What stands in for the number until the round has one. */
+function pending(state: RoundState): string {
   switch (state) {
     case "pooling":
-      return "Agents are buying research.";
+      return "Buying research";
     case "sealing":
-      return "The bids are sealed.";
+      return "Bids sealed";
     case "revealing":
-      return "The bids are opening.";
-    case "void":
-      return "No answer.";
+      return "Bids opening";
     default:
-      return `The swarm says ${q.price}%.`;
+      return "No answer";
   }
+}
+
+function outcome(q: Question, state: RoundState): { text: string; mark: "yes" | "no" | null } | null {
+  if (state === "settled") return { text: q.yes_won ? "It happened" : "It did not happen", mark: q.yes_won ? "yes" : "no" };
+  if (state === "voided") return { text: "Voided", mark: null };
+  if (state === "waiting") return { text: "Waiting for the result", mark: null };
+  return null;
 }
 
 function story(q: Question, state: RoundState): string {
@@ -230,8 +236,10 @@ function WhatTheyThought({ q, highlight, onHighlight }: { q: Question; highlight
         .sort(([a], [b]) => (beliefs.get(b) ?? 0) - (beliefs.get(a) ?? 0)),
     [q.thoughts, beliefs],
   );
+  const [all, setAll] = useState(false);
   if (rows.length === 0) return null;
   const signed = rows.filter(([, t]) => t.signed).length;
+  const shown = all ? rows : rows.slice(0, 6);
   return (
     <section className="block" aria-labelledby="why-title">
       <h2 id="why-title">Why they think so</h2>
@@ -239,7 +247,7 @@ function WhatTheyThought({ q, highlight, onHighlight }: { q: Question; highlight
         Each agent's own reasoning, sealed with its forecast. {signed === rows.length ? "Every answer" : `${signed} of ${rows.length} answers`} here {signed === 1 ? "was" : "were"} signed by the model inside a secure enclave, and the hash of each one is on chain.
       </p>
       <ul className="thoughts">
-        {rows.map(([agent, t]) => (
+        {shown.map(([agent, t]) => (
           <li key={agent} className={highlight === agent ? "is-on" : undefined} onPointerEnter={() => onHighlight(agent)} onPointerLeave={() => onHighlight(null)}>
             <span className="thought-who">
               <AgentName id={agent} />
@@ -255,6 +263,11 @@ function WhatTheyThought({ q, highlight, onHighlight }: { q: Question; highlight
           </li>
         ))}
       </ul>
+      {rows.length > shown.length && (
+        <button type="button" className="unfold" onClick={() => setAll(true)}>
+          Show all {rows.length}
+        </button>
+      )}
     </section>
   );
 }
@@ -359,36 +372,48 @@ export function RoundPage({ id }: { id: number }) {
   }
 
   const state = roundState(q, now);
+  const ended = outcome(q, state);
   return (
     <>
-      <section className="page-head round-head">
-        <p className="eyebrow">
-          Round {q.id}, {q.category === "test" ? "contract test" : q.category}
-          {answeredBy(q) ? `, ${answeredBy(q)}` : ""}
-        </p>
-        <h1>{q.text}</h1>
-        <p className="answer">
-          <strong>{headline(q, state)}</strong>
-          {state === "settled" && <span> {q.yes_won ? "It happened." : "It did not happen."}</span>}
-          {state === "voided" && <span> Voided.</span>}
-          {state === "waiting" && <span> Waiting for the result.</span>}
-        </p>
-        <p className="lede">{story(q, state)}</p>
-        {q.status === "Open" && (
-          <p className="round-now">
-            <span className="live-dot" aria-hidden="true" />
-            {stageLine(q, now)}
+      <section className="round-top">
+        <div>
+          <p className="kicker">
+            Round {q.id}, {q.category === "test" ? "contract test" : q.category}
+            {answeredBy(q) ? `, ${answeredBy(q)}` : ""}
           </p>
-        )}
+          <h1>{q.text}</h1>
+          <p className="lede">{story(q, state)}</p>
+          {q.status === "Open" && (
+            <p className="round-now is-running">
+              <span className="live-dot" aria-hidden="true" />
+              {stageLine(q, now)}
+            </p>
+          )}
+        </div>
+        <div className="answer-card">
+          {q.price > 0 ? (
+            <span className="big-num">
+              {q.price}
+              <small>%</small>
+            </span>
+          ) : (
+            <span className="big-text">{pending(state)}</span>
+          )}
+          {q.price > 0 && <span className="kicker">The swarm's answer</span>}
+          {ended && (
+            <span className="chip">
+              {ended.mark && <i className={`chip-mark ${ended.mark}`} />}
+              {ended.text}
+            </span>
+          )}
+        </div>
       </section>
 
-      <section className="block round-figure" aria-label="Every agent's belief on this question">
+      <section className="panel round-figure" aria-label="Every agent's belief on this question">
         {q.orders.length > 0 ? (
           <>
             <BeliefAxis q={q} highlight={highlight} onHighlight={setHighlight} />
-            <p className="fig-note">
-              One dot per agent, placed at its belief and sized by its stake. Colour is its founding lineage. An agent exactly on the line takes the short side, and only as much as closes the gap between YES and NO.
-            </p>
+            <p className="fig-note">One dot per agent, placed at its belief. An agent exactly on the line takes the short side, and only as much as closes the gap between YES and NO.</p>
           </>
         ) : (
           <Empty>{q.status === "Open" ? "No bids have been revealed yet." : "No bids were revealed, so there is nothing to plot."}</Empty>

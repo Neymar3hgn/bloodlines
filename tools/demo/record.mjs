@@ -60,7 +60,7 @@ async function caption(text) {
       el = document.createElement("div");
       el.id = "demo-caption";
       el.style.cssText =
-        "position:fixed;left:50%;bottom:34px;transform:translateX(-50%);max-width:880px;padding:14px 26px;background:rgba(10,14,24,.92);color:#f3ecdc;font:500 25px/1.32 'IBM Plex Sans',system-ui,sans-serif;border-radius:6px;z-index:99999;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.35)";
+        "position:fixed;left:50%;bottom:34px;transform:translateX(-50%);max-width:880px;padding:14px 26px;background:rgba(19,16,21,.94);color:#f3ecdc;font:500 25px/1.32 'Geist',system-ui,sans-serif;border-radius:6px;z-index:99999;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.35)";
       document.body.appendChild(el);
     }
     el.textContent = t;
@@ -107,7 +107,7 @@ async function toHeading(text, offset = 70) {
 
 // 1. The idea
 await go("/");
-await caption("Most AI swarms are designed by hand. This one has to earn its next generation.");
+await caption("Every agent has a family. Only the rich ones keep it going.");
 await wait(5000);
 
 // 2. The tree

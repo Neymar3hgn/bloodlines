@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { Tip } from "./bits";
 import { column, plural, tokenSymbol } from "../data/format";
-import { inkVar, SIDE_NAME } from "../data/model";
+import { SIDE_NAME } from "../data/model";
 import type { Order, Question } from "../data/types";
 import { nearest, prefersReducedMotion, useModel, useWidth } from "../hooks";
 import { agentHref } from "../router";
@@ -22,7 +22,9 @@ interface Dot {
 const SIDE_PAD = 14;
 const TOP = 58;
 const BOTTOM = 52;
-const GAP = 1.6;
+const GAP = 2;
+/** Colour says which side an agent ended up on. None, YES, NO. */
+const SIDE_COLOR = ["var(--none)", "var(--yes)", "var(--no)"];
 
 /** Area follows stake. Sizes are shared by every round, so rounds can be compared. */
 function dotRadius(stake: number, width: number) {
@@ -154,7 +156,7 @@ export function BeliefAxis({
         }}
       >
         {cleared && (yesBand || noBand) && (
-          <rect className="ba-won" x={yesBand ? priceX : SIDE_PAD} y={TOP - 4} width={yesBand ? xOf(100) - priceX : priceX - SIDE_PAD} height={baseline - TOP + 4} />
+          <rect className={`ba-won ${yesBand ? "yes" : "no"}`} x={yesBand ? priceX : SIDE_PAD} y={TOP - 4} width={yesBand ? xOf(100) - priceX : priceX - SIDE_PAD} height={baseline - TOP + 4} />
         )}
 
         <g className="ba-axis">
@@ -197,13 +199,22 @@ export function BeliefAxis({
               <a key={d.order.agent} href={agentHref(d.order.agent)} aria-label={`${d.order.agent}, belief ${d.order.belief}, stake ${d.order.stake}`}
                 onFocus={() => onHighlight(d.order.agent)} onBlur={() => onHighlight(null)}>
                 <g className={`ba-dot${dim ? " is-dim" : ""}`} style={{ transform: place }}>
-                  <circle r={sealed ? 4 : d.r} style={{ fill: sealed ? undefined : inkVar(m, d.order.agent) }} />
+                  <circle r={sealed ? 4 : d.r} style={{ fill: sealed ? undefined : SIDE_COLOR[d.order.side] }} />
                 </g>
               </a>
             );
           })}
         </g>
       </svg>
+
+      {!sealed && cleared && (
+        <div className="fig-key" aria-hidden="true">
+          <span><i style={{ background: "var(--yes)" }} /> Held YES</span>
+          <span><i style={{ background: "var(--no)" }} /> Held NO</span>
+          <span><i style={{ background: "var(--none)" }} /> Not filled</span>
+          <span>Size is its stake</span>
+        </div>
+      )}
 
       {active && !sealed && (
         <Tip x={active.x} y={active.y} width={width} pinned={!!pinned}>

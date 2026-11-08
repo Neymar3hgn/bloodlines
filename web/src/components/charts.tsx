@@ -15,7 +15,7 @@ export function MiniAxis({ q }: { q: Question }) {
       <line className="mini-base" x1={pad} x2={w - pad} y1={9} y2={9} />
       <line className="mini-end" x1={pad} x2={pad} y1={6} y2={12} />
       <line className="mini-end" x1={w - pad} x2={w - pad} y1={6} y2={12} />
-      {q.yes_won !== null && q.price > 0 && <circle className="mini-truth" cx={x(q.yes_won ? 100 : 0)} cy={9} r={3.5} />}
+      {q.yes_won !== null && q.price > 0 && <circle className={`mini-truth ${q.yes_won ? "yes" : "no"}`} cx={x(q.yes_won ? 100 : 0)} cy={9} r={4} />}
       {q.price > 0 && <line className="mini-price" x1={x(q.price)} x2={x(q.price)} y1={2} y2={16} />}
     </svg>
   );

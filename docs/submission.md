@@ -17,7 +17,7 @@ changed through a manual request, so check everything once before sending.
 
 | Field | Value |
 |---|---|
-| Project name | Clade |
+| Project name | Bloodlines |
 | Tracks | `swarms`, `agents`, `open` |
 | Repository | Your public GitHub URL |
 | Demo post | Your X post URL |
@@ -25,7 +25,7 @@ changed through a manual request, so check everything once before sending.
 
 ### What did you build? (under 2,000 characters)
 
-> Clade is an AI swarm that has to earn its next generation. Agents are NEAR
+> Bloodlines is an AI swarm that has to earn its next generation. Agents are NEAR
 > sub-accounts that sell forecasts and pay for their own inference on NEAR AI Cloud.
 > For each yes or no question, every agent seals one probability and a stake. Their
 > signed reveals land together in a single NEAR Intents transaction, and the
@@ -56,11 +56,11 @@ changed through a manual request, so check everything once before sending.
 Must say it was built at NEAR HACKATHON, tag @NEARProtocol and #NEARHackathon, and have
 the video or screenshots attached.
 
-> Most AI swarms are designed by hand.
+> Every agent in this AI swarm has a family.
 >
-> This one has to earn its next generation.
+> Only the rich ones keep it going.
 >
-> Clade agents are NEAR accounts that pay for their own thinking. Good forecasters
+> Bloodlines agents are NEAR accounts that pay for their own thinking. Good forecasters
 > have children. Broke ones get deleted from the chain, and their money goes to their
 > parent.
 >

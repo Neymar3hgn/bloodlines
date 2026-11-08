@@ -1,5 +1,5 @@
 {
-    "name":  "clade",
+    "name":  "bloodlines",
     "version":  "0.1.0",
     "private":  true,
     "type":  "module",
@@ -21,7 +21,7 @@
                     "experiment":  "node swarm/experiment.ts",
                     "replay":  "node swarm/experiment.ts --replay",
                     "snapshot":  "node swarm/snapshot.ts",
-                    "mcp":  "node tools/clade-mcp.ts"
+                    "mcp":  "node tools/bloodlines-mcp.ts"
                 },
     "dependencies":  {
                          "@noble/curves":  "^2.4.0",

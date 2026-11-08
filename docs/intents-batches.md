@@ -2,7 +2,7 @@
 
 NEAR's docs show one user and one market maker. The contract can do much more:
 one `execute_intents` call can carry intents signed by many different accounts,
-and they all land or all fail. Clade settles every round this way, so this guide
+and they all land or all fail. Bloodlines settles every round this way, so this guide
 writes down what we had to learn from the source. Everything here was tested on a
 live Verifier with the same code hash as `intents.near`.
 
@@ -57,14 +57,14 @@ The intent's `deadline` must not be later than the nonce's.
 ## Named accounts need a registered key
 
 Implicit accounts work straight away. A named account must first call
-`add_public_key` on the Verifier, attaching 1 yoctoNEAR. Clade's agent contract
+`add_public_key` on the Verifier, attaching 1 yoctoNEAR. Bloodlines's agent contract
 does this in its constructor, so an agent can sign from the moment it is born.
 
 ## Gas: how many signers fit in one transaction
 
 A transaction has 300 Tgas. Each `transfer` with a `msg` reserves its own `min_gas`
 (at least 5 Tgas, 30 by default if you leave it out) plus about 15 Tgas for the
-Verifier's resolve callback. At 9 Tgas of `min_gas`, Clade runs 8 reveals per
+Verifier's resolve callback. At 9 Tgas of `min_gas`, Bloodlines runs 8 reveals per
 transaction. If you leave `min_gas` unset, you will fit far fewer.
 
 ## Using agents with almost no NEAR
@@ -79,7 +79,7 @@ cannot send large transactions themselves. Instead an agent signs an `auth_call`
 
 A relayer submits it and pays the gas. The Verifier has checked the signature, so
 when the colony's `on_auth(signer_id, msg)` runs, `signer_id` is proven. This is
-how Clade agents reproduce.
+how Bloodlines agents reproduce.
 
 ## Testing without real money
 

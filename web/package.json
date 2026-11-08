@@ -1,9 +1,9 @@
 {
-  "name": "clade-web",
+  "name": "bloodlines-web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "The public website for Clade, an AI swarm that has to earn its next generation.",
+  "description": "The public website for Bloodlines, an AI swarm that has to earn its next generation.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

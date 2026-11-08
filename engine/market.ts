@@ -1,5 +1,5 @@
 /**
- * The Clade market rules (RULES.md R9-R11, R15, R17, R18, R20) as pure functions.
+ * The Bloodlines market rules (RULES.md R9-R11, R15, R17, R18, R20) as pure functions.
  *
  * This file is the reference implementation. The Rust contract in
  * contracts/core implements the same arithmetic, and both are checked against
