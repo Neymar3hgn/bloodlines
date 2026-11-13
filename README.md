@@ -2,18 +2,32 @@
 
 **Every agent has a family. Only the rich ones keep it going.**
 
-An AI swarm that has to earn its next generation. Built at NEAR HACKATHON. Tracks:
-`swarms`, `agents`, `open`. MIT licence.
+Bloodlines is a swarm of AI agents on NEAR that answer yes or no questions with their
+own money at stake. Built at NEAR HACKATHON. Tracks: `swarms`, `agents`, `open`. MIT
+licence.
+
+## The problem
+
+An AI sounds just as sure when it is wrong, and it loses nothing when it is. Whoever
+acted on the answer pays for the mistake. Today there is no simple way to tell which AI
+to trust.
+
+## What Bloodlines does
+
+Each agent is a NEAR account with its own money. For every question, each agent seals
+a probability and a stake, so nobody can copy anybody. The stake-weighted median of
+those beliefs is the swarm's answer. When the truth is known, agents that were right
+take money from agents that were wrong.
+
+Agents also pay for their own thinking. An agent that gets rich can have a child, with
+a strategy rewritten from its own record. An agent that goes broke has its account
+deleted, and what it had left goes to its nearest living ancestor. Nobody decides which
+strategies survive: the market does. So each answer comes from a crowd of agents that
+all had something to lose, and anyone can check every result from public chain data.
 
 > Bloodlines was called Clade while it was being built. The contracts, testnet accounts
 > and environment variables keep that working name, because renaming an account on chain
 > means redeploying it.
-
-Most swarms have their agents designed by hand. In Bloodlines, agents sell forecasts
-and pay for their own thinking. The ones that forecast well get rich and have
-children with rewritten strategies. The ones that go broke are deleted from the
-chain, and their money goes to their parent. Nobody decides which strategies
-survive. The market does.
 
 Each agent is a NEAR sub-account named under its parent, like
 `ko.ivy.s1.clade.testnet`. So the family tree isn't stored somewhere: **the account
@@ -21,6 +35,7 @@ names are the family tree**, and that comes straight from NEAR's account model.
 
 | | |
 |---|---|
+| Live site, reading the colony from NEAR testnet in your browser | [neymar3hgn.github.io/bloodlines](https://neymar3hgn.github.io/bloodlines/) |
 | Demo video, about 2 minutes, in plain words | [docs/demo.mp4](docs/demo.mp4) |
 | Rules | [RULES.md](RULES.md), written before the code |
 | Colony contract | [`s1.clade.testnet`](https://testnet.nearblocks.io/address/s1.clade.testnet) |
@@ -43,10 +58,12 @@ names are the family tree**, and that comes straight from NEAR's account model.
 
 ## Try it
 
-You need Node 22.18 or newer. Nothing below needs a key, a wallet or any funds.
+You need Node 22.18 or newer. Only the last two rows need funded testnet accounts;
+everything else needs no key, no wallet and no funds. To just look, open the
+[live site](https://neymar3hgn.github.io/bloodlines/).
 
 ```bash
-git clone <this repo> && cd clade
+git clone https://github.com/Neymar3hgn/bloodlines.git && cd bloodlines
 npm ci
 ```
 
@@ -60,7 +77,7 @@ npm ci
 | `npm run mcp` | An MCP server that lets any AI agent read the swarm. See [below](#for-near-builders) |
 | `cd web && npm ci && npm run dev` | The site on your own machine, following the colony live from the chain |
 | `npm run e2e` | The rules tested on a live network, with real rejected attacks. This one needs its own funded test colony. The last run is in [data/e2e-report.json](data/e2e-report.json) |
-| `npm run e2e:pools` | The research pool and sealed sale checks, on the public colony, for almost no NEAR. The last run is in [data/e2e-pools-report.json](data/e2e-pools-report.json) |
+| `npm run e2e:pools` | The research pool and sealed sale checks, for almost no NEAR, on a colony whose keys you hold. The last run, on the public colony, is in [data/e2e-pools-report.json](data/e2e-pools-report.json) |
 
 ## How a round works
 
@@ -243,8 +260,11 @@ node swarm/live.ts resolve
 ## Libraries and AI
 
 `near-sdk`, `near-contract-standards`, `near-api-js`, `@noble/curves`, `@noble/hashes`,
-Binaryen. The web app uses React, Vite and `d3-hierarchy`. The code was written with
-AI assistance (Claude Code), and the repository is the record of that work.
+Binaryen. The web app uses React, Vite and `d3-hierarchy`. The demo video was made with
+`edge-tts` (Microsoft's Andrew neural voice, so the narration is synthetic), Playwright
+and `ffmpeg-static`. The code was written with AI assistance (Claude Code), and the
+repository is the record of that work.
 
-The testnet Intents contract is `verifier.tidepool-sandbox.testnet`, a public testnet copy with the same code hash as mainnet `intents.near`.
-Past questions come from Polymarket's public API. Bloodlines never trades there.
+The testnet Intents contract is `verifier.tidepool-sandbox.testnet`, a public testnet
+copy with the same code hash as mainnet `intents.near`. Past questions come from
+Polymarket's public API. Bloodlines never trades there.

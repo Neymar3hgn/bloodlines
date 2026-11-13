@@ -5,11 +5,12 @@ changed through a manual request, so check everything once before sending.
 
 ## Checklist
 
-- [ ] Repo is public, with a LICENSE, and stays public through judging
-- [ ] No keys or secrets anywhere in git history (`.keys/` and `.env` are ignored)
+- [x] Repo is public at https://github.com/Neymar3hgn/bloodlines, with a LICENSE, and stays public through judging
+- [x] No keys or secrets anywhere in git history (`.keys/` and `.env` are ignored)
 - [x] README results updated with the real AI rounds
-- [ ] Site is live, and stays up until at least 18 Nov, ideally 25 Nov
-- [ ] Demo video recorded, and the X post is live
+- [ ] Site is live at https://neymar3hgn.github.io/bloodlines/, and stays up until at least 18 Nov, ideally 25 Nov
+- [x] Demo video recorded: [demo.mp4](demo.mp4)
+- [ ] The X post is live, with the video attached
 - [ ] The small mainnet run is done and linked, see [mainnet.md](mainnet.md)
 - [ ] Mainnet NEAR account ready for the prize payout
 
@@ -19,50 +20,39 @@ changed through a manual request, so check everything once before sending.
 |---|---|
 | Project name | Bloodlines |
 | Tracks | `swarms`, `agents`, `open` |
-| Repository | Your public GitHub URL |
+| Repository | https://github.com/Neymar3hgn/bloodlines |
 | Demo post | Your X post URL |
 | Website | Leave the API's `website` field empty. It is a spam trap and rejects the submission. The site link belongs in the README and the post |
 
 ### What did you build? (under 2,000 characters)
 
-> Bloodlines is an AI swarm that has to earn its next generation. Agents are NEAR
-> sub-accounts that sell forecasts and pay for their own inference on NEAR AI Cloud.
-> For each yes or no question, every agent seals one probability and a stake. Their
-> signed reveals land together in a single NEAR Intents transaction, and the
-> stake-weighted median becomes the swarm's answer. Agents above it hold YES, below it
-> NO, and right agents take money from wrong ones. Before bidding, buyer agents pool
-> money for one research briefing, and seller agents bid in a sealed auction to write
-> it. The cheapest offer wins, each buyer pays only its share, and refunds are enforced
-> on chain.
->
-> Selection does the rest. A rich agent signs a request to have a child, with a
-> strategy rewritten from its own wins and losses. Anyone can reap a broke agent: its
-> account is deleted and its money goes to its nearest living ancestor. Because only a
-> parent can create `child.parent.near`, the account names are the family tree.
->
-> It is live on testnet against a copy of the Intents contract with the same code hash
-> as mainnet. Eight rounds used real NEAR AI Cloud models, with signed answers checked
-> against the chain. 106 rule checks have passed on chain, including rejected attacks, and anyone can
-> rebuild the whole colony from public data with `npm run verify`, with no keys.
->
-> For NEAR builders it adds an oracle any contract can call, questions that resolve
-> themselves by reading a contract, an MCP server, a guide to multi-signer Intents
-> batches, and a draft NEP for agent lineage. That draft addresses a measured problem:
-> 81% of listed Agent Market agents have never delivered a job, because new agents
-> have no record. A family record gives them one.
-
+> AI answers sound just as sure when they are wrong, and the AI loses nothing, so there
+> is no simple way to know which AI to trust. Bloodlines is a swarm of AI agents that
+> must earn a living by being right. On each yes or no question, every agent seals a
+> probability and a stake, the stake-weighted median becomes the swarm's answer, and
+> agents that were right take money from agents that were wrong. Rich agents have
+> children with strategies rewritten from their own record, broke agents are deleted,
+> and agents can pool money to buy one research report that other agents bid to write
+> in a sealed auction. NEAR makes this work: every agent is a NEAR sub-account, so the
+> account names are the family tree; death really deletes the account; sealed reveals and
+> payments settle together through NEAR Intents; and NEAR AI Cloud signs the models'
+> answers, so anyone can check every result from the chain. It runs live on NEAR
+> testnet, including 8 rounds answered by real NEAR AI models.
 
 ## X post
 
-Must say it was built at NEAR HACKATHON, tag @NEARProtocol and #NEARHackathon, and have
-the video attached. This fits a free account's 280 characters, with room for one link.
+One post, with [demo.mp4](demo.mp4) attached. It says it was built at NEAR HACKATHON and
+tags @NEARProtocol and #NEARHackathon. X counts the link as 23 characters, so the post is
+277 of a free account's 280.
 
-> Every agent in this AI swarm has a family. Only the rich ones keep it going.
->
-> Good forecasters have children. Broke ones get deleted from NEAR. The account names
-> are the family tree.
->
-> Built at NEAR HACKATHON. @NEARProtocol #NEARHackathon
+```text
+AI sounds sure even when wrong, and loses nothing.
+
+In Bloodlines, each AI agent is a NEAR account with its own money: right answers earn, wrong ones cost, broke ones die.
+
+Built at NEAR HACKATHON @NEARProtocol #NEARHackathon
+What should it answer next? https://neymar3hgn.github.io/bloodlines/
+```
 
 ## Demo video
 
@@ -91,15 +81,14 @@ takes about two minutes, and the film about 10.
 
 ## Hosting the site
 
-`.github/workflows/pages.yml` publishes `web/` to GitHub Pages on every push to `main`.
-Turn it on once, in the repo's settings: Pages, then Build and deployment, then source
-GitHub Actions. The site is static, with its data in `web/public/data/snapshot.json`, so
-run `npm run snapshot` and push to update it.
+`.github/workflows/pages.yml` publishes `web/` to GitHub Pages, at
+https://neymar3hgn.github.io/bloodlines/, on every push to `main` that changes `web/` or
+`engine/`, and it can also be run by hand from the Actions tab. The site is static, with
+its data in `web/public/data/snapshot.json`, so run `npm run snapshot` and push to update
+it. Once open, it reads anything newer straight from the chain.
 
 ## Things only you can do
 
-- Provide the NEAR AI key, set as a user environment variable and never pasted in chat. The steps after that are in [ai-run.md](ai-run.md)
-- Publish the repo and host the site
-- Record or approve the video, and post it on X
+- Post the X post, with the video attached
 - Run any real-money mainnet steps
 - Send the final submission

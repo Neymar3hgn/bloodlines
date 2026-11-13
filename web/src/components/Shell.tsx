@@ -86,6 +86,9 @@ export function Shell({ route, children }: { route: Route; children: ReactNode }
           <p>
             Built at NEAR HACKATHON, AI Swarms track. Colony <Account id={colony} /> on {network}. The contracts and testnet accounts keep the project's working name, clade.
           </p>
+          <p>
+            <a href="https://github.com/Neymar3hgn/bloodlines">Source code on GitHub</a>, MIT licence.
+          </p>
           <p>{live.readAt ? `Pages open from a snapshot, then read anything newer straight from the chain, in your browser. Last change seen ${stamp(Date.parse(generated))}.` : `Pages are built from a snapshot of the chain written ${stamp(Date.parse(generated))}.`}</p>
         </div>
       </footer>
