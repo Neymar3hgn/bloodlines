@@ -8,7 +8,7 @@ changed through a manual request, so check everything once before sending.
 - [x] Repo is public at https://github.com/Neymar3hgn/bloodlines, with a LICENSE, and stays public through judging
 - [x] No keys or secrets anywhere in git history (`.keys/` and `.env` are ignored)
 - [x] README results updated with the real AI rounds
-- [ ] Site is live at https://neymar3hgn.github.io/bloodlines/, and stays up until at least 18 Nov, ideally 25 Nov
+- [x] Site is live at https://neymar3hgn.github.io/bloodlines/, and stays up until at least 18 Nov, ideally 25 Nov
 - [x] Demo video recorded: [demo.mp4](demo.mp4)
 - [ ] The X post is live, with the video attached
 - [ ] The small mainnet run is done and linked, see [mainnet.md](mainnet.md)
